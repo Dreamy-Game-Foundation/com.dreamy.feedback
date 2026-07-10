@@ -1,0 +1,32 @@
+{
+  "name": "com.dreamy.feedback",
+  "version": "0.1.0",
+  "displayName": "Dreamy Feedback",
+  "description": "Reusable feedback framework for mobile and casual Unity games: VFX, haptics, floating text, icon fly, screen feedback, camera shake, and optional sequences.",
+  "unity": "6000.0",
+  "dependencies": {
+    "com.unity.textmeshpro": "3.0.6",
+    "com.unity.ugui": "2.0.0",
+    "com.unity.modules.particlesystem": "1.0.0",
+    "com.cysharp.unitask": "2.5.10",
+    "com.dreamy.core": "1.1.2"
+  },
+  "keywords": [
+    "feedback",
+    "vfx",
+    "haptic",
+    "floating-text",
+    "camera-shake",
+    "dreamy"
+  ],
+  "author": {
+    "name": "Dreamy Studio"
+  },
+  "samples": [
+    {
+      "displayName": "Basic Feedback Sample",
+      "description": "Minimal setup and usage examples for Dreamy Feedback services.",
+      "path": "Samples~/BasicFeedbackSample"
+    }
+  ]
+}
