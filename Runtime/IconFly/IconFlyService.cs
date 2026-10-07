@@ -1,16 +1,20 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace Dreamy.Feedback
 {
-    public sealed class IconFlyService : IIconFlyService
+    public sealed class IconFlyService : IIconFlyService, IDisposable
     {
         private const string IconFlyName = "IconFlyInstance";
         private readonly Stack<IconFlyInstance> pool = new Stack<IconFlyInstance>();
+        private readonly HashSet<IconFlyInstance> instances = new HashSet<IconFlyInstance>();
+        private readonly HashSet<IconFlyInstance> active = new HashSet<IconFlyInstance>();
         private Transform root;
 
         public void Initialize(Transform root)
         {
+            Clear();
             this.root = root;
         }
 
@@ -22,27 +26,24 @@ namespace Dreamy.Feedback
                 return;
             }
 
-            var count = Mathf.Max(1, options.Count);
+            var count = Mathf.Clamp(options.Count, 1, 64);
             for (var i = 0; i < count; i++)
             {
                 var instance = Get();
+                active.Add(instance);
                 instance.Initialize(Release);
-                var offset = new Vector3(Random.Range(-options.Spread, options.Spread), Random.Range(-options.Spread, options.Spread), 0f);
+                var offset = new Vector3(UnityEngine.Random.Range(-options.Spread, options.Spread), UnityEngine.Random.Range(-options.Spread, options.Spread), 0f);
                 instance.Fly(options, offset);
             }
         }
 
         public void Clear()
         {
-            while (pool.Count > 0)
-            {
-                var instance = pool.Pop();
-                if (instance)
-                {
-                    Object.Destroy(instance.gameObject);
-                }
-            }
+            active.Clear(); pool.Clear();
+            foreach (var instance in instances) if (instance) { instance.gameObject.SetActive(false); UnityEngine.Object.Destroy(instance.gameObject); }
+            instances.Clear();
         }
+        public void Dispose() { Clear(); root = null; }
 
         private IconFlyInstance Get()
         {
@@ -57,15 +58,12 @@ namespace Dreamy.Feedback
 
             var go = new GameObject(IconFlyName, typeof(RectTransform));
             go.transform.SetParent(root, false);
-            return go.AddComponent<IconFlyInstance>();
+            var created = go.AddComponent<IconFlyInstance>(); instances.Add(created); return created;
         }
 
         private void Release(IconFlyInstance instance)
         {
-            if (!instance)
-            {
-                return;
-            }
+            if (!instance || !active.Remove(instance)) return;
 
             instance.gameObject.SetActive(false);
             instance.transform.SetParent(root, false);

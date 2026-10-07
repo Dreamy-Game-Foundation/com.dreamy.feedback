@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -5,16 +6,19 @@ using UnityEngine;
 
 namespace Dreamy.Feedback
 {
-    public sealed class VfxService : IVfxService
+    public sealed class VfxService : IVfxService, IDisposable
     {
         private readonly Dictionary<GameObject, Stack<VfxInstance>> pools = new Dictionary<GameObject, Stack<VfxInstance>>();
         private readonly Dictionary<VfxInstance, GameObject> prefabByInstance = new Dictionary<VfxInstance, GameObject>();
         private readonly Dictionary<VfxInstance, CancellationTokenSource> despawnTokens = new Dictionary<VfxInstance, CancellationTokenSource>();
+        private readonly Dictionary<VfxInstance, long> active = new Dictionary<VfxInstance, long>();
+        private long generation;
         private VfxDatabase database;
         private Transform root;
 
         public void Initialize(VfxDatabase database, Transform root)
         {
+            Clear();
             this.database = database;
             this.root = root;
             Prewarm();
@@ -58,6 +62,8 @@ namespace Dreamy.Feedback
                 instance.transform.position = options.Position;
             }
 
+            long lease = ++generation;
+            active[instance] = lease;
             instance.Initialize(Release);
             instance.Play();
             if (options.FollowTarget)
@@ -66,7 +72,10 @@ namespace Dreamy.Feedback
             }
 
             ScheduleDespawn(instance, entry);
-            return new VfxHandle(instance);
+            return new VfxHandle(instance, () => active.TryGetValue(instance, out long current) && current == lease, () =>
+            {
+                if (active.TryGetValue(instance, out long current) && current == lease) instance.Stop();
+            });
         }
 
         public void Prewarm()
@@ -86,28 +95,24 @@ namespace Dreamy.Feedback
 
                 for (var j = 0; j < entry.PrewarmCount; j++)
                 {
-                    Release(Create(entry.Prefab));
+                    var instance = Create(entry.Prefab); active[instance] = ++generation; Release(instance);
                 }
             }
         }
 
         public void Clear()
         {
-            foreach (var pool in pools.Values)
+            foreach (var cancellation in despawnTokens.Values) { cancellation.Cancel(); cancellation.Dispose(); }
+            despawnTokens.Clear(); active.Clear(); pools.Clear();
+            foreach (var instance in prefabByInstance.Keys)
             {
-                while (pool.Count > 0)
-                {
-                    var instance = pool.Pop();
-                    if (instance)
-                    {
-                        Object.Destroy(instance.gameObject);
-                    }
-                }
+                if (!instance) continue;
+                instance.gameObject.SetActive(false);
+                UnityEngine.Object.Destroy(instance.gameObject);
             }
-
-            pools.Clear();
             prefabByInstance.Clear();
         }
+        public void Dispose() { Clear(); database = null; root = null; }
 
         private VfxInstance Get(GameObject prefab)
         {
@@ -128,7 +133,7 @@ namespace Dreamy.Feedback
 
         private VfxInstance Create(GameObject prefab)
         {
-            var go = Object.Instantiate(prefab, root);
+            var go = UnityEngine.Object.Instantiate(prefab, root);
             var instance = go.GetComponent<VfxInstance>();
             if (!instance)
             {
@@ -143,17 +148,14 @@ namespace Dreamy.Feedback
 
         private void Release(VfxInstance instance)
         {
-            if (!instance)
-            {
-                return;
-            }
+            if (!instance || !active.Remove(instance)) return;
 
             instance.gameObject.SetActive(false);
             CancelDespawn(instance);
             instance.transform.SetParent(root, false);
             if (!prefabByInstance.TryGetValue(instance, out var prefab) || !prefab)
             {
-                Object.Destroy(instance.gameObject);
+                UnityEngine.Object.Destroy(instance.gameObject);
                 return;
             }
 

@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace Dreamy.Feedback
 {
+    [System.Serializable]
     public struct ScreenFlashOptions
     {
         public Color Color;

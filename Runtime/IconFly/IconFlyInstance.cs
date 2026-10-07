@@ -73,7 +73,7 @@ namespace Dreamy.Feedback
                 await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken).SuppressCancellationThrow();
             }
 
-            releaseAction?.Invoke(this);
+            if (!cancellationToken.IsCancellationRequested) releaseAction?.Invoke(this);
         }
     }
 }

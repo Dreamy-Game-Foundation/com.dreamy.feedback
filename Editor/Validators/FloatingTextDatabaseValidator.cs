@@ -29,6 +29,9 @@ namespace Dreamy.Feedback.Editor
                     issues.Add(new FeedbackValidationIssue(true, $"Floating text '{entry.Id}' prefab is null."));
                 }
 
+                if (entry.Prefab && !entry.Prefab.GetComponentInChildren<TMPro.TMP_Text>(true))
+                    issues.Add(new FeedbackValidationIssue(true, $"Floating text '{entry.Id}' prefab requires TMP_Text."));
+
                 if (entry.PrewarmCount < 0)
                 {
                     issues.Add(new FeedbackValidationIssue(true, $"Floating text '{entry.Id}' prewarmCount is negative."));

@@ -12,6 +12,7 @@ namespace Dreamy.Feedback
         [SerializeField] private Image overlay;
 
         private CancellationTokenSource flashCancellation;
+        private long generation;
 
         public void Ensure()
         {
@@ -44,22 +45,26 @@ namespace Dreamy.Feedback
             SetAlpha(0f, Color.clear);
         }
 
-        public void Flash(ScreenFlashOptions options, Action complete = null)
+        public FeedbackHandle Flash(ScreenFlashOptions options, Action complete = null)
         {
             Ensure();
-            flashCancellation?.Cancel();
-            flashCancellation?.Dispose();
+            Stop();
             flashCancellation = new CancellationTokenSource();
-
+            long session = ++generation;
             FlashAsync(options, complete, flashCancellation.Token).Forget();
+            return new FeedbackHandle(true, () => { if (generation == session) Stop(); });
         }
 
-        private void OnDisable()
+        public void Stop()
         {
+            generation++;
             flashCancellation?.Cancel();
             flashCancellation?.Dispose();
             flashCancellation = null;
+            SetAlpha(0f, Color.clear);
         }
+        private void OnDisable() => Stop();
+        private void OnDestroy() => Stop();
 
         private async UniTaskVoid FlashAsync(ScreenFlashOptions options, Action complete, CancellationToken cancellationToken)
         {
@@ -74,12 +79,15 @@ namespace Dreamy.Feedback
                 await UniTask.Delay(TimeSpan.FromSeconds(options.HoldDuration), cancellationToken: cancellationToken).SuppressCancellationThrow();
             }
 
+            if (cancellationToken.IsCancellationRequested) return;
             await FadeAsync(options.MaxAlpha, 0f, options.FadeOutDuration, options.Color, cancellationToken);
+            if (cancellationToken.IsCancellationRequested) return;
             complete?.Invoke();
         }
 
         private async UniTask FadeAsync(float from, float to, float duration, Color color, CancellationToken cancellationToken)
         {
+            if (cancellationToken.IsCancellationRequested) return;
             if (duration <= 0f)
             {
                 SetAlpha(to, color);

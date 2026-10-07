@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace Dreamy.Feedback
 {
+    [System.Serializable]
     public struct CameraShakeOptions
     {
         public float Duration;

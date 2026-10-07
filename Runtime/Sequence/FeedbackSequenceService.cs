@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Dreamy.Feedback
 {
-    public sealed class FeedbackSequenceService : IFeedbackSequenceService
+    public sealed class FeedbackSequenceService : IFeedbackSequenceService, IDisposable
     {
         private FeedbackSequenceDatabase database;
         private FeedbackSequenceServices services;
@@ -13,6 +13,7 @@ namespace Dreamy.Feedback
 
         public void Initialize(FeedbackSequenceDatabase database, FeedbackSequenceServices services)
         {
+            Stop();
             this.database = database;
             this.services = services ?? new FeedbackSequenceServices();
         }
@@ -31,42 +32,50 @@ namespace Dreamy.Feedback
                 return FeedbackHandle.Invalid;
             }
 
-            activeCancellation?.Cancel();
-            activeCancellation?.Dispose();
-            activeCancellation = new CancellationTokenSource();
-            PlayAsync(entry, context, activeCancellation.Token).Forget();
-            return new FeedbackHandle(true, Stop);
+            Stop();
+            var session = new CancellationTokenSource();
+            activeCancellation = session;
+            PlayAsync(entry, context, session).Forget();
+            return new FeedbackHandle(true, () => { if (ReferenceEquals(activeCancellation, session)) Stop(); });
         }
 
-        private void Stop()
+        public void Stop()
         {
             activeCancellation?.Cancel();
             activeCancellation?.Dispose();
             activeCancellation = null;
         }
 
-        private async UniTaskVoid PlayAsync(FeedbackSequenceEntry entry, FeedbackContext context, CancellationToken cancellationToken)
+        public void Dispose() { Stop(); database = null; services = null; }
+
+        private async UniTaskVoid PlayAsync(FeedbackSequenceEntry entry, FeedbackContext context, CancellationTokenSource session)
         {
-            for (var i = 0; i < entry.Actions.Count; i++)
+            var cancellationToken = session.Token;
+            try
             {
-                if (cancellationToken.IsCancellationRequested)
+                for (var i = 0; i < entry.Actions.Count; i++)
                 {
-                    return;
-                }
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        return;
+                    }
 
-                var action = entry.Actions[i];
-                if (action == null)
-                {
-                    continue;
-                }
+                    var action = entry.Actions[i];
+                    if (action == null)
+                    {
+                        continue;
+                    }
 
-                if (action.Delay > 0f)
-                {
-                    await UniTask.Delay(TimeSpan.FromSeconds(action.Delay), cancellationToken: cancellationToken).SuppressCancellationThrow();
-                }
+                    if (action.Delay > 0f)
+                    {
+                        await UniTask.Delay(TimeSpan.FromSeconds(action.Delay), cancellationToken: cancellationToken).SuppressCancellationThrow();
+                    }
 
-                PlayAction(action, context);
+                    if (cancellationToken.IsCancellationRequested) return;
+                    PlayAction(action, context);
+                }
             }
+            finally { if (ReferenceEquals(activeCancellation, session)) Stop(); }
         }
 
         private void PlayAction(FeedbackSequenceAction action, FeedbackContext context)

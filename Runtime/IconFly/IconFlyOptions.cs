@@ -3,6 +3,7 @@ using UnityEngine.UI;
 
 namespace Dreamy.Feedback
 {
+    [System.Serializable]
     public struct IconFlyOptions
     {
         public Sprite Icon;

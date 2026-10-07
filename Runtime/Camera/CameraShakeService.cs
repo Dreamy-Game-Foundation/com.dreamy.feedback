@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Dreamy.Feedback
 {
-    public sealed class CameraShakeService : ICameraShakeService
+    public sealed class CameraShakeService : ICameraShakeService, IDisposable
     {
         private CameraShakeDatabase database;
         private Transform cameraTransform;
@@ -14,6 +14,7 @@ namespace Dreamy.Feedback
 
         public void Initialize(CameraShakeDatabase database, Camera camera)
         {
+            Stop();
             this.database = database;
             cameraTransform = camera ? camera.transform : null;
             if (cameraTransform)
@@ -49,14 +50,17 @@ namespace Dreamy.Feedback
 
             Stop();
 
-            activeCancellation = new CancellationTokenSource();
-            ShakeAsync(options, activeCancellation.Token).Forget();
-            return new FeedbackHandle(true, Stop);
+            originalLocalPosition = cameraTransform.localPosition;
+            var session = new CancellationTokenSource();
+            activeCancellation = session;
+            ShakeAsync(options, session).Forget();
+            return new FeedbackHandle(true, () => { if (ReferenceEquals(activeCancellation, session)) Stop(); });
         }
 
-        private void Stop()
+        public void Stop()
         {
-            activeCancellation?.Cancel();
+            if (activeCancellation == null) return;
+            activeCancellation.Cancel();
             activeCancellation?.Dispose();
             activeCancellation = null;
 
@@ -66,8 +70,11 @@ namespace Dreamy.Feedback
             }
         }
 
-        private async UniTaskVoid ShakeAsync(CameraShakeOptions options, CancellationToken cancellationToken)
+        public void Dispose() { Stop(); database = null; cameraTransform = null; }
+
+        private async UniTaskVoid ShakeAsync(CameraShakeOptions options, CancellationTokenSource session)
         {
+            var cancellationToken = session.Token;
             var elapsed = 0f;
             var duration = Mathf.Max(0.01f, options.Duration);
             while (elapsed < duration && cameraTransform && !cancellationToken.IsCancellationRequested)
@@ -80,7 +87,7 @@ namespace Dreamy.Feedback
                 await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken).SuppressCancellationThrow();
             }
 
-            Stop();
+            if (ReferenceEquals(activeCancellation, session)) Stop();
         }
     }
 }

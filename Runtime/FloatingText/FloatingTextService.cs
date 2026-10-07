@@ -1,18 +1,29 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace Dreamy.Feedback
 {
-    public sealed class FloatingTextService : IFloatingTextService
+    public sealed class FloatingTextService : IFloatingTextService, IDisposable
     {
         private const string DefaultStyleId = "default";
         private readonly Dictionary<FloatingTextInstance, FloatingTextEntry> entryByInstance = new Dictionary<FloatingTextInstance, FloatingTextEntry>();
         private readonly Dictionary<FloatingTextEntry, Stack<FloatingTextInstance>> pools = new Dictionary<FloatingTextEntry, Stack<FloatingTextInstance>>();
+        private readonly Dictionary<FloatingTextInstance, long> active = new Dictionary<FloatingTextInstance, long>();
+        private long generation;
+        private Camera worldCamera;
         private FloatingTextDatabase database;
         private Transform root;
 
         public void Initialize(FloatingTextDatabase database, Transform root)
         {
+            Initialize(database, root, null);
+        }
+
+        public void Initialize(FloatingTextDatabase database, Transform root, Camera worldCamera)
+        {
+            Clear();
+            this.worldCamera = worldCamera;
             this.database = database;
             this.root = root;
             Prewarm();
@@ -50,9 +61,14 @@ namespace Dreamy.Feedback
             var moveOffset = options.MoveOffset ?? entry.MoveOffset;
             var startScale = options.StartScale ?? entry.StartScale;
             var endScale = options.EndScale ?? entry.EndScale;
+            long lease = ++generation; active[instance] = lease;
             instance.Initialize(Release);
+            if (worldCamera) worldPosition = FeedbackUtility.WorldToUIPosition(worldPosition, worldCamera, root);
             instance.Play(text, worldPosition, color, duration, moveOffset, startScale, endScale);
-            return new FeedbackHandle(true, () => Release(instance));
+            return new FeedbackHandle(true, () =>
+            {
+                if (active.TryGetValue(instance, out long current) && current == lease) Release(instance);
+            });
         }
 
         public void Prewarm()
@@ -72,28 +88,22 @@ namespace Dreamy.Feedback
 
                 for (var j = 0; j < entry.PrewarmCount; j++)
                 {
-                    Release(Create(entry));
+                    var instance = Create(entry); active[instance] = ++generation; Release(instance);
                 }
             }
         }
 
         public void Clear()
         {
-            foreach (var pool in pools.Values)
+            active.Clear(); pools.Clear();
+            foreach (var instance in entryByInstance.Keys)
             {
-                while (pool.Count > 0)
-                {
-                    var instance = pool.Pop();
-                    if (instance)
-                    {
-                        Object.Destroy(instance.gameObject);
-                    }
-                }
+                if (!instance) continue;
+                instance.gameObject.SetActive(false); UnityEngine.Object.Destroy(instance.gameObject);
             }
-
-            pools.Clear();
             entryByInstance.Clear();
         }
+        public void Dispose() { Clear(); database = null; root = null; worldCamera = null; }
 
         private FloatingTextInstance Get(FloatingTextEntry entry)
         {
@@ -114,23 +124,20 @@ namespace Dreamy.Feedback
 
         private FloatingTextInstance Create(FloatingTextEntry entry)
         {
-            var instance = Object.Instantiate(entry.Prefab, root);
+            var instance = UnityEngine.Object.Instantiate(entry.Prefab, root);
             entryByInstance[instance] = entry;
             return instance;
         }
 
         private void Release(FloatingTextInstance instance)
         {
-            if (!instance)
-            {
-                return;
-            }
+            if (!instance || !active.Remove(instance)) return;
 
             instance.gameObject.SetActive(false);
             instance.transform.SetParent(root, false);
             if (!entryByInstance.TryGetValue(instance, out var entry))
             {
-                Object.Destroy(instance.gameObject);
+                UnityEngine.Object.Destroy(instance.gameObject);
                 return;
             }
 

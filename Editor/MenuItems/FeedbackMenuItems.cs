@@ -6,7 +6,7 @@ namespace Dreamy.Feedback.Editor
 {
     public static class FeedbackMenuItems
     {
-        private const string MenuRoot = "Tools/Dreamy/Feedback/";
+        private const string MenuRoot = "Dreamy/Feedback/";
         private const string DefaultAssetFolder = "Assets";
 
         [MenuItem(MenuRoot + "Open Window")]

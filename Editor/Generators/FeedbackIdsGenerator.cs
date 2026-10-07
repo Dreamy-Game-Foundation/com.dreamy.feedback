@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -12,39 +14,30 @@ namespace Dreamy.Feedback.Editor
 
         public static void GenerateSelected()
         {
-            EnsureOutputFolder();
-            var generatedAny = false;
-            for (var i = 0; i < Selection.objects.Length; i++)
+            var grouped = new Dictionary<string, List<string>>();
+            foreach (var selected in Selection.objects)
             {
-                var selected = Selection.objects[i];
-                if (selected is VfxDatabase vfxDatabase)
-                {
-                    Write("VfxIds.cs", GenerateClass("VfxIds", Collect(vfxDatabase)));
-                    generatedAny = true;
-                }
-                else if (selected is FloatingTextDatabase floatingTextDatabase)
-                {
-                    Write("FloatingTextIds.cs", GenerateClass("FloatingTextIds", Collect(floatingTextDatabase)));
-                    generatedAny = true;
-                }
-                else if (selected is CameraShakeDatabase cameraShakeDatabase)
-                {
-                    Write("CameraShakeIds.cs", GenerateClass("CameraShakeIds", Collect(cameraShakeDatabase)));
-                    generatedAny = true;
-                }
-                else if (selected is FeedbackSequenceDatabase sequenceDatabase)
-                {
-                    Write("FeedbackSequenceIds.cs", GenerateClass("FeedbackSequenceIds", Collect(sequenceDatabase)));
-                    generatedAny = true;
-                }
+                if (selected is VfxDatabase vfx) CollectInto(grouped, "VfxIds", Collect(vfx));
+                else if (selected is FloatingTextDatabase text) CollectInto(grouped, "FloatingTextIds", Collect(text));
+                else if (selected is CameraShakeDatabase shake) CollectInto(grouped, "CameraShakeIds", Collect(shake));
+                else if (selected is FeedbackSequenceDatabase sequence) CollectInto(grouped, "FeedbackSequenceIds", Collect(sequence));
             }
-
-            if (!generatedAny)
+            if (grouped.Count == 0)
             {
                 Debug.LogWarning("Select one or more Dreamy Feedback databases before generating IDs.");
+                return;
             }
+            EnsureOutputFolder();
+            foreach (var pair in grouped)
+                Write(pair.Key + ".cs", GenerateClass(pair.Key, pair.Value.Distinct(StringComparer.Ordinal).OrderBy(id => id, StringComparer.Ordinal)));
 
             AssetDatabase.Refresh();
+        }
+
+        private static void CollectInto(Dictionary<string, List<string>> grouped, string name, IEnumerable<string> ids)
+        {
+            if (!grouped.TryGetValue(name, out var list)) { list = new List<string>(); grouped.Add(name, list); }
+            list.AddRange(ids);
         }
 
         public static string GenerateClass(string className, IEnumerable<string> ids)
@@ -129,7 +122,7 @@ namespace Dreamy.Feedback.Editor
 
         private static string Escape(string value)
         {
-            return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            return value.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n").Replace("\t", "\\t").Replace("\0", "\\0");
         }
     }
 }

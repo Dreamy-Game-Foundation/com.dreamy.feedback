@@ -2,12 +2,13 @@ using UnityEngine;
 
 namespace Dreamy.Feedback
 {
-    public sealed class ScreenFeedbackService : IScreenFeedbackService
+    public sealed class ScreenFeedbackService : IScreenFeedbackService, System.IDisposable
     {
         private ScreenFlashView view;
 
         public void Initialize(Transform root)
         {
+            Dispose();
             if (!root)
             {
                 Debug.LogWarning("ScreenFeedbackService.Initialize called with null root.");
@@ -33,13 +34,14 @@ namespace Dreamy.Feedback
                 return FeedbackHandle.Invalid;
             }
 
-            view.Flash(options);
-            return new FeedbackHandle(true, null);
+            return view.Flash(options);
         }
 
         public FeedbackHandle Fade(ScreenFlashOptions options)
         {
             return Flash(options);
         }
+        public void Stop() { if (view) view.Stop(); }
+        public void Dispose() { Stop(); view = null; }
     }
 }

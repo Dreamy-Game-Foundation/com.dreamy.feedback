@@ -1,12 +1,11 @@
 {
-  "name": "Dreamy.Feedback",
+  "name": "Dreamy.Feedback.Runtime",
   "rootNamespace": "Dreamy.Feedback",
   "references": [
     "Dreamy.Core.Runtime",
     "UniTask",
     "Unity.TextMeshPro",
-    "Unity.ugui",
-    "UnityEngine.ParticleSystemModule"
+    "UnityEngine.UI"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
