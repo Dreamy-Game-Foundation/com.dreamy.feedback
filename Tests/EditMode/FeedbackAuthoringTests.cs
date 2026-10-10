@@ -26,18 +26,17 @@ namespace Dreamy.Feedback.Tests
         }
         [Test] public void SequenceOptionsRoundTripThroughUnitySerialization()
         {
-            var db = ScriptableObject.CreateInstance<FeedbackSequenceDatabase>(); var copy = ScriptableObject.CreateInstance<FeedbackSequenceDatabase>();
+            var db=ScriptableObject.CreateInstance<FeedbackDefinition>(); var copy=ScriptableObject.CreateInstance<FeedbackDefinition>();
             try
             {
-                var action = new FeedbackSequenceAction(); Set(action, "type", FeedbackSequenceActionType.ScreenFlash); Set(action, "screenFlashOptions", ScreenFlashOptions.WhiteFlash(.8f));
-                Set(action, "iconFlyOptions", new IconFlyOptions { Count = 7, Duration = .9f });
-                var entry = new FeedbackSequenceEntry(); Set(entry, "id", "test"); Set(entry, "actions", new List<FeedbackSequenceAction> { action }); Set(db, "entries", new List<FeedbackSequenceEntry> { entry });
-                EditorJsonUtility.FromJsonOverwrite(EditorJsonUtility.ToJson(db), copy);
-                var result = copy.Entries[0].Actions[0]; Assert.That(result.ScreenFlashOptions.MaxAlpha, Is.EqualTo(.65f));
-                Assert.That(result.IconFlyOptions.Count, Is.EqualTo(7));
+                db.Configure("test",FeedbackNode.Group(FeedbackNodeType.Sequence,new FeedbackNode { Type=FeedbackNodeType.ScreenFlash, Flash=ScreenFlashOptions.WhiteFlash(.8f) }));
+                EditorJsonUtility.FromJsonOverwrite(EditorJsonUtility.ToJson(db),copy);
+                Assert.That(copy.Root.Children[0].Flash.MaxAlpha,Is.EqualTo(.65f));
+                Assert.That(copy.Root.Type,Is.EqualTo(FeedbackNodeType.Sequence));
             }
             finally { Object.DestroyImmediate(db); Object.DestroyImmediate(copy); }
         }
+
         [Test] public void DuplicateIdAndMissingPrefabAreReported()
         {
             var db = ScriptableObject.CreateInstance<VfxDatabase>();

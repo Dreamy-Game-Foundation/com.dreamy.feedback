@@ -1,6 +1,6 @@
 {
   "name": "com.dreamy.feedback",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "displayName": "Dreamy Feedback",
   "description": "Reusable feedback framework for mobile and casual Unity games: VFX, haptics, floating text, icon fly, screen feedback, camera shake, and optional sequences.",
   "unity": "6000.0",
@@ -8,7 +8,6 @@
     "com.unity.ugui": "2.0.0",
     "com.unity.modules.particlesystem": "1.0.0",
     "com.cysharp.unitask": "2.5.10",
-    "com.dreamy.core": "1.1.2",
     "com.unity.modules.imageconversion": "1.0.0"
   },
   "keywords": [
@@ -25,13 +24,8 @@
   "samples": [
     {
       "displayName": "Basic Feedback",
-      "description": "Complete seven-channel demo with scene, prefab, databases and rebuild tools.",
+      "description": "Ready-to-use feedback rig and reward presets, plus a preview scene. No Economy/UI/Audio integration required.",
       "path": "Samples~/BasicFeedbackSample"
-    },
-    {
-      "displayName": "Feedback Economy",
-      "description": "Wallet reward feedback with Dreamy Economy, UI and Audio. Import Basic Feedback first; see sample prerequisites.",
-      "path": "Samples~/Feedback Economy"
     }
   ]
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Cysharp.Threading.Tasks;
 
 namespace Dreamy.Feedback
 {
@@ -10,6 +11,9 @@ namespace Dreamy.Feedback
         private readonly Dictionary<FloatingTextInstance, FloatingTextEntry> entryByInstance = new Dictionary<FloatingTextInstance, FloatingTextEntry>();
         private readonly Dictionary<FloatingTextEntry, Stack<FloatingTextInstance>> pools = new Dictionary<FloatingTextEntry, Stack<FloatingTextInstance>>();
         private readonly Dictionary<FloatingTextInstance, long> active = new Dictionary<FloatingTextInstance, long>();
+        private readonly Dictionary<FloatingTextInstance, FeedbackPlayback> playback = new Dictionary<FloatingTextInstance, FeedbackPlayback>();
+        private IFeedbackAnimationBackend backend = new UnityFeedbackAnimationBackend();
+        public int MaximumActiveTexts { get; set; } = 64;
         private long generation;
         private Camera worldCamera;
         private FloatingTextDatabase database;
@@ -20,9 +24,10 @@ namespace Dreamy.Feedback
             Initialize(database, root, null);
         }
 
-        public void Initialize(FloatingTextDatabase database, Transform root, Camera worldCamera)
+        public void Initialize(FloatingTextDatabase database, Transform root, Camera worldCamera, IFeedbackAnimationBackend backend = null)
         {
             Clear();
+            this.backend = backend ?? new UnityFeedbackAnimationBackend();
             this.worldCamera = worldCamera;
             this.database = database;
             this.root = root;
@@ -36,6 +41,7 @@ namespace Dreamy.Feedback
 
         public FeedbackHandle Play(string text, Vector3 worldPosition, FloatingTextOptions options)
         {
+            if (active.Count >= MaximumActiveTexts) return default;
             if (!database)
             {
                 Debug.LogWarning("FloatingTextService.Play called before Initialize.");
@@ -58,17 +64,26 @@ namespace Dreamy.Feedback
             var instance = Get(entry);
             var color = options.Color ?? entry.Color;
             var duration = options.Duration ?? entry.Duration;
+            if (float.IsNaN(duration) || float.IsInfinity(duration) || duration < 0) return default;
             var moveOffset = options.MoveOffset ?? entry.MoveOffset;
             var startScale = options.StartScale ?? entry.StartScale;
             var endScale = options.EndScale ?? entry.EndScale;
             long lease = ++generation; active[instance] = lease;
-            instance.Initialize(Release);
+
             if (worldCamera) worldPosition = FeedbackUtility.WorldToUIPosition(worldPosition, worldCamera, root);
-            instance.Play(text, worldPosition, color, duration, moveOffset, startScale, endScale);
-            return new FeedbackHandle(true, () =>
-            {
-                if (active.TryGetValue(instance, out long current) && current == lease) Release(instance);
-            });
+            var state = new FeedbackPlayback(); playback[instance] = state;
+            var animation = instance.Play(text, worldPosition, color, duration, moveOffset, startScale, endScale, options.UnscaledTime, backend);
+            state.Bind(() => { animation.Stop(); Release(instance); }, () => { animation.Complete(); Release(instance); });
+            Observe(instance, lease, state, animation).Forget();
+            return state.Handle;
+        }
+
+        private async UniTaskVoid Observe(FloatingTextInstance instance, long lease, FeedbackPlayback state, FeedbackHandle animation)
+        {
+            var status = await animation.Completion.AsUniTask();
+            if (state.Status != FeedbackStatus.Running) return;
+            if (status == FeedbackStatus.Completed) { Release(instance); state.Finish(); }
+            else state.Stop();
         }
 
         public void Prewarm()
@@ -86,7 +101,7 @@ namespace Dreamy.Feedback
                     continue;
                 }
 
-                for (var j = 0; j < entry.PrewarmCount; j++)
+                for (var j = 0; j < Mathf.Clamp(entry.PrewarmCount,0,64); j++)
                 {
                     var instance = Create(entry); active[instance] = ++generation; Release(instance);
                 }
@@ -95,6 +110,7 @@ namespace Dreamy.Feedback
 
         public void Clear()
         {
+            foreach (var state in new List<FeedbackPlayback>(playback.Values)) state.Stop(); playback.Clear();
             active.Clear(); pools.Clear();
             foreach (var instance in entryByInstance.Keys)
             {
@@ -133,6 +149,7 @@ namespace Dreamy.Feedback
         {
             if (!instance || !active.Remove(instance)) return;
 
+            if (playback.TryGetValue(instance, out var state)) { playback.Remove(instance); state.Finish(); }
             instance.gameObject.SetActive(false);
             instance.transform.SetParent(root, false);
             if (!entryByInstance.TryGetValue(instance, out var entry))

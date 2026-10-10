@@ -20,7 +20,7 @@ namespace Dreamy.Feedback.Editor
                 if (selected is VfxDatabase vfx) CollectInto(grouped, "VfxIds", Collect(vfx));
                 else if (selected is FloatingTextDatabase text) CollectInto(grouped, "FloatingTextIds", Collect(text));
                 else if (selected is CameraShakeDatabase shake) CollectInto(grouped, "CameraShakeIds", Collect(shake));
-                else if (selected is FeedbackSequenceDatabase sequence) CollectInto(grouped, "FeedbackSequenceIds", Collect(sequence));
+                else if (selected is FeedbackDefinition definition) CollectInto(grouped, "FeedbackIds", new[] { definition.Id });
             }
             if (grouped.Count == 0)
             {
@@ -94,14 +94,6 @@ namespace Dreamy.Feedback.Editor
             for (var i = 0; i < database.Presets.Count; i++)
             {
                 yield return database.Presets[i]?.Id;
-            }
-        }
-
-        private static IEnumerable<string> Collect(FeedbackSequenceDatabase database)
-        {
-            for (var i = 0; i < database.Entries.Count; i++)
-            {
-                yield return database.Entries[i]?.Id;
             }
         }
 

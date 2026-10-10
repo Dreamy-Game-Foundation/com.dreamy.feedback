@@ -1,3 +1,80 @@
+# Current starter sample verification — 2026-10-09
+
+This section supersedes the earlier sample design and counts below. Local working tree, Unity 6000.4.12f1 Linux; no published tag.
+
+- Removed Feedback Economy sample, puzzle tiles and one-time upgrade/build generators. Foundation wallet observation is project-owned; its Feedback button now plays presentation directly without opening an Economy panel.
+- Added a clean GameFeedbackRig (seven transforms; no Camera, Light, EventSystem, sample definitions or SpriteRenderer), FeedbackPlayer and Coin/Star/Energy/Gem reward presets. Per-request icon overrides leave shared definitions unchanged.
+- Preserved the user's Magic font and Hyper Casual confetti in the sandbox preview. Portable sample uses OFL Liberation Sans, original sample VFX and original resource icons; third-party asset dependencies are excluded and verified in a consumer without those assets.
+- README now covers importing the rig, existing HUD anchors, Inspector events, primitive/facade calls, camera setup, asset replacement, lifetime and extension boundaries. Built-in graph node types still require executor/editor changes to extend; only services/backends/animators are directly replaceable externally.
+
+Evidence: sandbox `.omo/evidence/feedback-starter/`.
+
+| Gate | Result |
+| --- | --- |
+| Sandbox runtime + DOTween + starter + Foundation | 28/28 PlayMode passed |
+| Clean consumer without Core, DOTween, Hyper Casual FX or custom font | 24/24 PlayMode passed |
+| Definition authoring EditMode | 4/4 passed |
+| Linux development build and error-sensitive player smoke | Passed, exit 0 |
+| Reusable rig with existing HUD and owner disable | Passed in sandbox and clean consumer |
+| Request sprite override without graph mutation | Passed |
+| Camera world projection movement/restoration, without board | Passed |
+
+The Foundation fixture now scrolls buttons into the viewport before raycasting, preserving the user's scrollable Foundation prefab. One failed fixture run (offscreen Feedback button) and incomplete assembly-filtered runs are not counted as passes. New screenshots are named starter-portrait/starter-landscape. Build/player smoke and EditMode results are recorded in the final evidence summary.
+
+Physical Android/iOS haptics, device performance and thermal budgets remain untested. The historical results below describe earlier revisions and are retained only as history.
+
+---
+
+# Feedback 0.3.0 local validation
+
+Validation date: 2026-10-09. Unity 6000.4.12f1, Linux Editor/player. This validates the local working tree, not a published tag. Historical 0.2.0 results below are not gates for this refactor.
+
+## Current implementation
+
+- Engine-only Contracts assembly, definition/request facade, Sequence/Parallel completion, bounded graph validation, shared Stop/Complete handles, owner cancellation, pooled primitives, UI Punch and optional Core registration.
+- Removed legacy sequence API and host reward glue. Economy and Foundation now submit requests; retry/reopen/close/raycast regression coverage remains.
+- Separate optional `com.dreamy.feedback.dotween` adapter uses the observed DOTween.dll distribution. No DOTween or Editor references in base Runtime/Contracts.
+- Basic has five icon trajectories (Straight, Arc, ScatterMagnet, Fountain, Spiral), composite reward/hit/click, Stop/Complete controls and a world-space puzzle board for visible camera shake.
+- Source sample assets use portable shaders/materials and omit DOTween-provider/URP components. Imported sandbox rigs explicitly use the adapter. Existing imported 0.2.0 folder and scene/prefab GUIDs are retained.
+
+## Current evidence
+
+Evidence is in sandbox `.omo/evidence/feedback-modular/`.
+
+| Gate | Result | Evidence |
+| --- | --- | --- |
+| Sandbox package, adapter, samples and Foundation PlayMode | 29/29 passed | final-29-playmode-mcp.json |
+| Definition authoring EditMode | 4/4 passed | final-editmode-mcp.json |
+| Basic after portable board material change | 2/2 passed | MCP job ece4f43a59cc41d1b5cff0fd9d5f3df7 |
+| Clean base consumer without Core, DOTween or URP | 22/22 PlayMode passed | feedback-consumer-playmode.xml |
+| Clean consumer with optional DOTween adapter, without Core | 25/25 PlayMode passed | feedback-dotween-consumer-playmode.xml |
+| Linux development player build | Passed | feedback-consumer-build.log |
+| Error-sensitive Linux player smoke | Passed, exit 0 | feedback-player-smoke.log |
+| Manifest/asmdef JSON, Runtime/Editor and DOTween boundary, source diff whitespace | Passed | validation-summary.json and local source inspection |
+
+Tests cover real Sequence/Parallel completion, required-module failure, owner destruction, stale pool handles, repeated Stop/Complete, unscaled playback, graph cycles/budgets, disabled VFX cleanup, five DOTween icon paths and camera movement/restoration. Consumer build validation checks missing scripts, definitions, renderer materials/shaders and absence of Core/DOTween. Player smoke plays every demo channel and fails on logged errors.
+
+Portrait/landscape captures are camera RenderTexture evidence, not physical-device screenshots. Existing static font glyph/atlas assets were preserved together during rebuild. TMP Essential Resources remain required; the sample does not ship duplicate TMP Settings.
+
+## Reproduce current gates
+
+1. Select the exact sandbox in Unity MCP before mutation. Use Test Runner for package/adapter/sample/Foundation PlayMode assemblies and Feedback EditMode tests. Close Device Simulator during pointer tests so simulated safe-area coordinates do not affect GameView fixtures.
+2. Create a Unity 6000.4.12f1 project with the base manifest recorded in `consumer-manifest.json`; import official TMP Essential Resources and Basic from `Samples~`. Run PlayMode tests. `consumer-FeedbackConsumerValidation.cs` records import/build validation; `consumer-FeedbackPlayerSmoke.cs` records the player smoke fixture.
+3. Add the optional adapter and DOTween distribution using `dotween-consumer-manifest.json`, then run PlayMode tests. DOTween 0.0.3 includes Audio/Physics/Physics2D module source and requires those engine modules in a minimal consumer.
+4. Build and run the Linux development player. Both build and smoke logs include explicit PASS markers; aborted/zero-test runs are not counted.
+
+## Current limits
+
+- Android/iOS builds, physical vibration, touch/safe-area and performance/thermal budgets have not been measured. Haptics use generic Unity vibration.
+- Tested engine is 6000.4.12f1; minimum 6000.0 in the manifest is not proof of all versions. Adapter validation covers DOTween package 0.0.3 / DLL 1.2.320; other distributions may need asmdef changes.
+- Default restricted Linux player startup encountered SDL/input initialization failure; the successful smoke used the normal host environment. No result is inferred from the failed startup.
+- Unity-generated YAML includes native serialization whitespace; source/config Markdown/JSON/C# checks pass. No manual scene/prefab YAML rewrite was used.
+- No commit, push or version tag was made. The new adapter must be included separately when publishing the working tree.
+
+---
+
+## Historical 0.2.0 validation
+
 # Feedback 0.2.0 local validation
 
 Validation date: 2026-10-07. Unity 6000.4.12f1, Windows Editor/player, sandbox URP 17.4.0 and clean consumer built-in renderer. Toolkit canonical version: 0.1.0-alpha.2. This validates the 0.2.0 Git source revision; a tagged release and mobile store readiness are not claimed.

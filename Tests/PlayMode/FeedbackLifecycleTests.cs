@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
-using Dreamy.Core;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -17,21 +16,16 @@ namespace Dreamy.Feedback.Tests
         {
             foreach (var obj in objects) if (obj) Object.Destroy(obj);
             objects.Clear();
-            ServiceLocator.Unregister<IHapticService>();
             yield return null;
         }
         [UnityTest] public IEnumerator CancelDuringSequenceDelayDoesNotPlayAction()
         {
-            var db = Track(ScriptableObject.CreateInstance<FeedbackSequenceDatabase>());
-            var action = new FeedbackSequenceAction();
-            Set(action, "type", FeedbackSequenceActionType.Haptic); Set(action, "delay", .1f);
-            var entry = new FeedbackSequenceEntry(); Set(entry, "id", "test");
-            Set(entry, "actions", new List<FeedbackSequenceAction> { action });
-            Set(db, "entries", new List<FeedbackSequenceEntry> { entry });
+            var definition=Track(ScriptableObject.CreateInstance<FeedbackDefinition>());
+            definition.Configure("test",FeedbackNode.Group(FeedbackNodeType.Sequence,
+                new FeedbackNode { Type=FeedbackNodeType.Delay, Duration=.1f }, new FeedbackNode { Type=FeedbackNodeType.Haptic }));
             var haptic = new FakeHaptic();
-            var service = new FeedbackSequenceService();
-            service.Initialize(db, new FeedbackSequenceServices { Haptic = haptic });
-            service.Play("test", default).Stop();
+            var service = new FeedbackService(new FeedbackServices { Haptic=haptic },new UnityFeedbackAnimationBackend());
+            service.Play(new FeedbackRequest(definition,FeedbackContext.At(Vector3.zero))).Stop();
             yield return new WaitForSeconds(.15f);
             Assert.That(haptic.Count, Is.Zero, "Canceled delay must not dispatch its action.");
         }
@@ -61,6 +55,13 @@ namespace Dreamy.Feedback.Tests
             yield return null;
             Assert.That(root.GetChild(0).gameObject.activeSelf, Is.True);
             service.Clear();
+        }
+        [UnityTest] public IEnumerator ExternallyDisabledVfxSettlesItsHandle()
+        {
+            var service=Vfx(out var root);var h=service.Play("test",Vector3.zero);
+            root.GetChild(0).gameObject.SetActive(false);yield return null;
+            Assert.That(h.Status,Is.EqualTo(FeedbackStatus.Stopped));
+            var next=service.Play("test",Vector3.zero);h.Stop();Assert.That(next.IsRunning,Is.True);service.Dispose();
         }
         [UnityTest] public IEnumerator ClearDestroysActiveVfx()
         {
@@ -108,14 +109,6 @@ namespace Dreamy.Feedback.Tests
             var moved = new Vector3(5, 3, -10); camera.transform.localPosition = moved;
             var handle = service.Shake(CameraShakeOptions.Small); yield return null; handle.Stop();
             Assert.That(camera.transform.localPosition, Is.EqualTo(moved)); service.Dispose();
-        }
-        [Test] public void OldRegistryOwnerDoesNotUnregisterReplacement()
-        {
-            var first = new FakeHaptic(); var second = new FakeHaptic();
-            var old = FeedbackServiceRegistry.RegisterOwned(haptic: first);
-            var current = FeedbackServiceRegistry.RegisterOwned(haptic: second);
-            old.Dispose(); Assert.That(ServiceLocator.Get<IHapticService>(), Is.SameAs(second));
-            current.Dispose(); Assert.That(ServiceLocator.IsRegistered<IHapticService>(), Is.False);
         }
         private sealed class FakeHaptic : IHapticService
         {

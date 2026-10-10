@@ -33,10 +33,10 @@ namespace Dreamy.Feedback.Editor
             CreateAsset<CameraShakeDatabase>("CameraShakeDatabase.asset");
         }
 
-        [MenuItem(MenuRoot + "Create/Feedback Sequence Database")]
-        public static void CreateFeedbackSequenceDatabase()
+        [MenuItem(MenuRoot + "Create/Feedback Definition")]
+        public static void CreateFeedbackDefinition()
         {
-            CreateAsset<FeedbackSequenceDatabase>("FeedbackSequenceDatabase.asset");
+            CreateAsset<FeedbackDefinition>("FeedbackDefinition.asset");
         }
 
         [MenuItem(MenuRoot + "Validate All")]
@@ -45,7 +45,7 @@ namespace Dreamy.Feedback.Editor
             ValidateAssets(FindAssets<VfxDatabase>(), "VFX Database", VfxDatabaseValidator.Validate);
             ValidateAssets(FindAssets<FloatingTextDatabase>(), "Floating Text Database", FloatingTextDatabaseValidator.Validate);
             ValidateAssets(FindAssets<CameraShakeDatabase>(), "Camera Shake Database", CameraShakeDatabaseValidator.Validate);
-            ValidateAssets(FindAssets<FeedbackSequenceDatabase>(), "Feedback Sequence Database", FeedbackSequenceDatabaseValidator.Validate);
+            ValidateAssets(FindAssets<FeedbackDefinition>(), "Feedback Definition", FeedbackDefinitionValidator.Validate);
         }
 
         [MenuItem(MenuRoot + "Generate IDs")]

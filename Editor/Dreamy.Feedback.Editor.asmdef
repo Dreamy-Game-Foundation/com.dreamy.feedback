@@ -3,7 +3,8 @@
   "rootNamespace": "Dreamy.Feedback.Editor",
   "references": [
     "Dreamy.Feedback.Runtime",
-    "Unity.TextMeshPro"
+    "Unity.TextMeshPro",
+    "Dreamy.Feedback.Contracts"
   ],
   "includePlatforms": [
     "Editor"

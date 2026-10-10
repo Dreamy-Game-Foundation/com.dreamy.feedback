@@ -1,72 +1,78 @@
 # Dreamy Feedback
 
-Unity 6000 feedback services: VFX, mobile haptics, floating text, icon fly, screen flash/fade, camera shake and sequences. Version 0.2.0 includes scene ownership, cancellation-safe handles and two complete samples.
+Feedback cho Unity: VFX, haptic, floating text, icon bay về HUD, UI punch, camera shake và screen flash. Một `FeedbackDefinition` có thể ghép các effect bằng Sequence, Parallel và Delay. Package chỉ trình bày kết quả; việc cộng tiền, năng lượng hoặc phần thưởng thuộc gameplay.
 
-## Installation
+## Dùng ngay trong game
 
-In this sandbox, the Git submodule lives at `LocalPackages/com.dreamy.feedback` and UPM uses `file:../LocalPackages/com.dreamy.feedback`. Initialize submodules before opening Unity.
+1. Cài package và dependency trong `package.json`. DOTween và Dreamy Core là tùy chọn.
+2. Import sample **Basic Feedback** trong Package Manager và import **TMP Essential Resources** nếu project chưa có.
+3. Kéo `Generated/GameFeedbackRig.prefab` vào scene. Prefab đã có host, pool roots, Canvas effect và database mặc định; không chứa camera, đèn, puzzle tiles hay UI demo.
+4. Thêm **Feedback Player** lên một GameObject trong UI. Gán Host và Definition, rồi kéo anchor bắt đầu vào Icon Source và icon HUD vào Target.
+5. Gán `FeedbackPlayer.Play()` vào `Button.onClick`. Có thể chọn `CoinReward`, `StarReward`, `EnergyReward`, `GemReward` hoặc definition riêng.
 
-For another project, install Dreamy Core 1.1.2 and UniTask 2.5.10 or compatible verified revisions before installing via Git. UGUI 2.0.0 supplies TMP on Unity 6000; do not add the legacy standalone TMP 3.0.6 package. Runtime assembly: `Dreamy.Feedback.Runtime`. Editor assembly: `Dreamy.Feedback.Editor`.
+Không cần chạy builder. `FeedbackDemo.unity` dùng để xem trước các preset và so sánh kiểu animation. `FeedbackRig.prefab` chứa camera/anchor của preview; dùng **GameFeedbackRig** khi tích hợp vào game.
 
-Version 0.2.0 is available from the package Git repository. No version tag is created by this change; pin the tested package commit when consuming it. See [VALIDATION.md](VALIDATION.md) for evidence and platform limits.
+## Gọi từ code
 
-## Samples
-
-Import from Package Manager > Dreamy Feedback > Samples:
-
-| Sample | Open after import | Prerequisites |
-| --- | --- | --- |
-| Basic Feedback | `Generated/FeedbackDemo.unity` | Feedback and its declared dependencies; TMP Essential Resources |
-| Feedback Economy | `Generated/FeedbackEconomyDemo.unity` | Import Basic Feedback first; install Dreamy Economy, UI, Audio and their dependencies |
-
-Basic Feedback has buttons for all seven channels, Play All, Stop/Clear and a haptic toggle. It ships a rig prefab, particle/text prefabs, original coin sprite, databases, camera, sample shaders and a static ASCII Liberation Sans font with its OFL license. Controls scroll on short/landscape displays. The simple sample shaders can be replaced with production art.
-
-Feedback Economy uses Dreamy UI, committed wallet balance events and Dreamy Audio. Grant commits 100 coins, then shows reward presentation; Retry uses the same transaction and does not replay the reward. The standalone scene uses an **in-memory demonstration wallet** and an original generated audio tone. Foundation injects its persistent Datasave wallet and existing audio; the sample never creates a second production save.
-
-To rebuild into a new folder, save the active scene, close Prefab Stage and exit Play Mode. Use `Dreamy/Feedback/Build Basic Demo`, then `Dreamy/Feedback/Build Economy Demo`. Import TMP Essential Resources once before running or rebuilding the samples. The shipped scene/prefab assets run without rebuilding. Sample editor/runtime/test assemblies stay separate. The shipped EventSystem uses StandaloneInputModule and requires Input Manager (Old) or Both; replace it with InputSystemUIInputModule in new-input-only projects.
-
-## Ownership and setup
-
-`FeedbackHost` is an optional scene component which initializes explicit database/camera/root references on enable and shuts down on disable/destroy. Use the sample `FeedbackRig.prefab` as a starting point. Assign your own art and camera. If gameplay drives camera movement, shake a dedicated camera child rather than a transform driven by another controller.
-
-For manual composition, retain and dispose the concrete services:
+Gán `host` và `rewardDefinition` qua Inspector hoặc inject service từ composition root:
 
 ```csharp
-var vfx = new VfxService();
-vfx.Initialize(vfxDatabase, root.WorldVfxRoot);
-var text = new FloatingTextService();
-text.Initialize(textDatabase, root.FloatingTextRoot, worldCamera);
-var registration = FeedbackServiceRegistry.RegisterOwned(vfx: vfx, floatingText: text);
+// Chạy sau khi gameplay đã xác nhận phần thưởng.
+host.Initialize();
+FeedbackHandle handle = host.Feedback.Play(
+    FeedbackRequestBuilder.For(rewardDefinition)
+        .From(this)                 // disable/destroy owner sẽ hủy request
+        .IconsFrom(rewardAnchor)    // RectTransform trong UI
+        .To(starHud)                // HUD đích được theo dõi khi di chuyển
+        .WithAmount(3)              // dữ liệu text; không phải số icon animation
+        .WithIcon(starSprite)       // tùy chọn: thay sprite, giữ nguyên graph
+        .At(worldPosition)          // dùng cho VFX/floating text
+        .Build());
 
-vfx.Play("reward", rewardWorldPosition);
-text.Play("+100", rewardWorldPosition);
-
-// At owner shutdown:
-registration.Dispose();
-text.Dispose();
-vfx.Dispose();
+// Khi cần hủy riêng request này:
+handle.Stop();
+// Hoặc tua đến cuối các bước, gồm effect chưa bắt đầu:
+// handle.Complete();
 ```
 
-`RegisterOwned` removes a registration only while the registered instance still belongs to that owner. Legacy `Register` remains available but its caller must unregister manually. Leaves receive explicit dependencies rather than resolving global services.
+Nếu chỉ cần một effect, gọi primitive trực tiếp:
 
-`Clear` cancels and destroys active and idle pooled objects. Repeated/stale service-issued handle stops cannot release a newer lease. `Dispose` also drops database/root references; call `Initialize` to reuse the service. Sequence Stop cancels pending actions; already dispatched effects belong to individual services. `FeedbackHost.StopAll` resets pending sequences, shake/flash and all pooled effects.
+```csharp
+var options = IconFlyOptions.Create(energySprite, source.position, energyHud.position);
+options.Target = energyHud;
+options.Count = 8;
+options.Style = IconFlyStyle.Fountain;
+FeedbackHandle flight = host.IconFly.Fly(options);
+host.Ui.Punch(energyHud, UiPunchOptions.Default);
+host.Vfx.Play("reward", worldPosition);
+```
 
-Floating text's three-argument Initialize projects world positions through an explicit camera to its UI root. The legacy overload keeps native transform-position behavior. Icon fly start/end positions use UI transform space, for example RectTransform positions on the same canvas. Never use icon arrival to grant resources.
+Primitive playback cần được caller giữ handle và Stop khi đóng UI. Request composite có `.From(this)` tự theo lifetime của owner. `StopAll()` trên host ảnh hưởng mọi caller dùng chung host.
 
-Haptic `Enabled` and `MinimumInterval` control the built-in fallback. On Android/iOS players, non-None types use Unity's generic vibration with one intensity. Editor/unsupported platforms do not vibrate. Distinct light/medium/heavy native patterns are not implemented.
+## Preset và camera
 
-## Editor tools
+| Preset sample | Animation mặc định |
+| --- | --- |
+| CoinReward | Scatter Magnet, 12 icon, punch HUD khi đến |
+| StarReward | Arc, 4 icon, không xoay |
+| EnergyReward | Fountain, 8 icon |
+| GemReward | Spiral, 6 icon |
+| ButtonClick | UI punch + haptic |
+| Hit | VFX + camera shake + haptic chạy song song |
 
-Use `Dreamy/Feedback/Create/...`, `Generate IDs` and `Validate All`. Validators check IDs, prefabs, timing/options and incomplete actions. ID output belongs to `Assets/DreamyFeedbackGenerated`; constants escape quotes/control characters and disambiguate identifier collisions.
+Duplicate definition để chỉnh thời gian, Count, Size, Spread, Stagger, ArcHeight, Spin và Ease. `Amount` là giá trị reward thật; `Count` là số icon dùng để minh họa, giới hạn 64 mỗi lượt. `.WithIcon()` chỉ thay sprite của lượt phát, không sửa shared definition.
 
-## Migration from 0.1.0
+Nếu dùng floating text hoặc camera shake, gán camera game vào Host trước khi chạy. Từ bootstrap có thể gọi `host.Initialize(gameCamera)`; thay camera sẽ dừng playback hiện tại và khởi tạo lại service. Với camera follow, gán Camera Root của FeedbackRoot vào transform offset nằm dưới follow rig và phía trên camera.
 
-- Replace asmdef references to `Dreamy.Feedback` with `Dreamy.Feedback.Runtime`; existing asmdef/script GUIDs are retained.
-- Update menu paths from `Tools/Dreamy/Feedback` to `Dreamy/Feedback`.
-- Replace the old skeleton sample's implicit scene search/global registration with an assigned FeedbackHost and owner cleanup.
-- Camera, screen and icon option structs now serialize correctly. Re-author values lost by the old non-serializable structs; missing data cannot be recovered.
-- `ScreenFlashView.Flash` now returns a handle. Statement calls stay source-compatible; method-group bindings may need updating.
+IconSource/Target trong preset reward là **UI anchors**. World position không tự chuyển thành vị trí icon HUD. [Hướng dẫn sample](Samples~/BasicFeedbackSample/README.md) có setup HUD, đổi asset và các lỗi thường gặp.
 
-Feedback has no direct dependency on Audio, Economy, UI, DataConfig, Datasave, DOTween, Addressables or Cinemachine. These remain host/sample concerns. See [VALIDATION.md](VALIDATION.md) for results and platform limits.
+## Mở rộng
 
-Before running either sample in a fresh project, import **Window > TextMeshPro > Import TMP Essential Resources** once. UGUI 2.0 TMP still needs its project-wide TMP Settings/default style resources in players. The sample uses its own static font and shaders, but does not ship a second `Resources/TMP Settings` asset that could conflict with your project.
+- Gameplay có thể inject `IFeedbackService` hoặc từng primitive interface; không cần ServiceLocator.
+- `FeedbackServices` cho phép thay implementation primitive khi tự compose `FeedbackService`.
+- `IFeedbackAnimationBackend` và `IIconFlyAnimator` cho phép thay animation implementation. Adapter `com.dreamy.feedback.dotween` triển khai hai điểm này; API gameplay không chứa Tween/Sequence/Ease của DOTween.
+- Graph hiện có 10 node built-in. Thêm một loại node mới cần bổ sung enum, executor và Inspector/validation; graph chưa có registry custom node cho package bên ngoài.
+
+Contracts chỉ phụ thuộc Unity engine; Runtime dùng UniTask/UGUI. Core registration nằm trong assembly integration tùy chọn. Effect có pooling và active budgets; Stop/Complete idempotent, handle cũ không tác động instance đã tái sử dụng. Các request độc lập, nhưng Punch/Shake/Flash mới thay effect trước trên cùng target/channel.
+
+Chi tiết: [semantics và authoring](Documentation~/getting-started.md), [migration 0.3](Documentation~/migration-0.3.md), [validation](VALIDATION.md).

@@ -12,6 +12,8 @@ namespace Dreamy.Feedback
         private readonly Dictionary<VfxInstance, GameObject> prefabByInstance = new Dictionary<VfxInstance, GameObject>();
         private readonly Dictionary<VfxInstance, CancellationTokenSource> despawnTokens = new Dictionary<VfxInstance, CancellationTokenSource>();
         private readonly Dictionary<VfxInstance, long> active = new Dictionary<VfxInstance, long>();
+        private readonly Dictionary<VfxInstance, FeedbackPlayback> playback = new Dictionary<VfxInstance, FeedbackPlayback>();
+        public int MaximumActiveVfx { get; set; } = 64;
         private long generation;
         private VfxDatabase database;
         private Transform root;
@@ -24,13 +26,14 @@ namespace Dreamy.Feedback
             Prewarm();
         }
 
-        public VfxHandle Play(string id, Vector3 worldPosition)
+        public FeedbackHandle Play(string id, Vector3 worldPosition)
         {
             return Play(id, VfxPlayOptions.At(worldPosition));
         }
 
-        public VfxHandle Play(string id, VfxPlayOptions options)
+        public FeedbackHandle Play(string id, VfxPlayOptions options)
         {
+            if (active.Count >= MaximumActiveVfx) return default;
             if (!database)
             {
                 Debug.LogWarning("VfxService.Play called before Initialize.");
@@ -52,6 +55,7 @@ namespace Dreamy.Feedback
             var instance = Get(entry.Prefab);
             var parent = options.Parent ? options.Parent : root;
             instance.transform.SetParent(parent, false);
+            instance.transform.localScale = entry.Prefab.transform.localScale * (options.Scale == 0 ? 1 : options.Scale);
             instance.transform.rotation = options.Rotation == default ? Quaternion.identity : options.Rotation;
             if (options.UseLocalPosition)
             {
@@ -64,18 +68,18 @@ namespace Dreamy.Feedback
 
             long lease = ++generation;
             active[instance] = lease;
-            instance.Initialize(Release);
+            var state = new FeedbackPlayback(); playback[instance] = state;
+            instance.Initialize(Release, () => state.Stop());
+            state.Bind(() => { if (active.TryGetValue(instance, out long current) && current == lease) instance.Stop(); },
+                () => { if (active.TryGetValue(instance, out long current) && current == lease) instance.Stop(); });
             instance.Play();
             if (options.FollowTarget)
             {
                 instance.Follow(options.FollowTarget);
             }
 
-            ScheduleDespawn(instance, entry);
-            return new VfxHandle(instance, () => active.TryGetValue(instance, out long current) && current == lease, () =>
-            {
-                if (active.TryGetValue(instance, out long current) && current == lease) instance.Stop();
-            });
+            ScheduleDespawn(instance, entry, options.UnscaledTime);
+            return state.Handle;
         }
 
         public void Prewarm()
@@ -93,7 +97,7 @@ namespace Dreamy.Feedback
                     continue;
                 }
 
-                for (var j = 0; j < entry.PrewarmCount; j++)
+                for (var j = 0; j < Mathf.Clamp(entry.PrewarmCount,0,64); j++)
                 {
                     var instance = Create(entry.Prefab); active[instance] = ++generation; Release(instance);
                 }
@@ -102,6 +106,7 @@ namespace Dreamy.Feedback
 
         public void Clear()
         {
+            foreach (var state in new List<FeedbackPlayback>(playback.Values)) state.Stop(); playback.Clear();
             foreach (var cancellation in despawnTokens.Values) { cancellation.Cancel(); cancellation.Dispose(); }
             despawnTokens.Clear(); active.Clear(); pools.Clear();
             foreach (var instance in prefabByInstance.Keys)
@@ -150,6 +155,7 @@ namespace Dreamy.Feedback
         {
             if (!instance || !active.Remove(instance)) return;
 
+            if (playback.TryGetValue(instance, out var state)) { playback.Remove(instance); state.Finish(); }
             instance.gameObject.SetActive(false);
             CancelDespawn(instance);
             instance.transform.SetParent(root, false);
@@ -168,7 +174,7 @@ namespace Dreamy.Feedback
             pool.Push(instance);
         }
 
-        private void ScheduleDespawn(VfxInstance instance, VfxEntry entry)
+        private void ScheduleDespawn(VfxInstance instance, VfxEntry entry, bool unscaled)
         {
             if (entry.DespawnMode == VfxDespawnMode.Manual)
             {
@@ -190,12 +196,12 @@ namespace Dreamy.Feedback
             CancelDespawn(instance);
             var cancellation = new CancellationTokenSource();
             despawnTokens[instance] = cancellation;
-            DespawnAfterAsync(instance, lifetime, cancellation.Token).Forget();
+            DespawnAfterAsync(instance, lifetime, cancellation.Token, unscaled).Forget();
         }
 
-        private async UniTaskVoid DespawnAfterAsync(VfxInstance instance, float lifetime, CancellationToken cancellationToken)
+        private async UniTaskVoid DespawnAfterAsync(VfxInstance instance, float lifetime, CancellationToken cancellationToken, bool unscaled)
         {
-            var canceled = await UniTask.Delay(System.TimeSpan.FromSeconds(lifetime), cancellationToken: cancellationToken)
+            var canceled = await UniTask.Delay(System.TimeSpan.FromSeconds(lifetime), ignoreTimeScale: unscaled, cancellationToken: cancellationToken)
                 .SuppressCancellationThrow();
             if (!canceled && instance && instance.gameObject.activeSelf)
             {

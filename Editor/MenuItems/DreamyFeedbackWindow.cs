@@ -11,7 +11,7 @@ namespace Dreamy.Feedback.Editor
         private VfxDatabase vfxDatabase;
         private FloatingTextDatabase floatingTextDatabase;
         private CameraShakeDatabase cameraShakeDatabase;
-        private FeedbackSequenceDatabase sequenceDatabase;
+        private FeedbackDefinition sequenceDatabase;
         private Vector2 scroll;
 
         public static void Open()
@@ -27,7 +27,7 @@ namespace Dreamy.Feedback.Editor
             vfxDatabase = (VfxDatabase)EditorGUILayout.ObjectField("VFX", vfxDatabase, typeof(VfxDatabase), false);
             floatingTextDatabase = (FloatingTextDatabase)EditorGUILayout.ObjectField("Floating Text", floatingTextDatabase, typeof(FloatingTextDatabase), false);
             cameraShakeDatabase = (CameraShakeDatabase)EditorGUILayout.ObjectField("Camera Shake", cameraShakeDatabase, typeof(CameraShakeDatabase), false);
-            sequenceDatabase = (FeedbackSequenceDatabase)EditorGUILayout.ObjectField("Sequence", sequenceDatabase, typeof(FeedbackSequenceDatabase), false);
+            sequenceDatabase = (FeedbackDefinition)EditorGUILayout.ObjectField("Sequence", sequenceDatabase, typeof(FeedbackDefinition), false);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Create", EditorStyles.boldLabel);
@@ -53,7 +53,7 @@ namespace Dreamy.Feedback.Editor
 
                 if (GUILayout.Button("Sequence"))
                 {
-                    FeedbackMenuItems.CreateFeedbackSequenceDatabase();
+                    FeedbackMenuItems.CreateFeedbackDefinition();
                 }
             }
 
@@ -82,7 +82,7 @@ namespace Dreamy.Feedback.Editor
             LogIssues("VFX Database", vfxDatabase ? VfxDatabaseValidator.Validate(vfxDatabase) : null);
             LogIssues("Floating Text Database", floatingTextDatabase ? FloatingTextDatabaseValidator.Validate(floatingTextDatabase) : null);
             LogIssues("Camera Shake Database", cameraShakeDatabase ? CameraShakeDatabaseValidator.Validate(cameraShakeDatabase) : null);
-            LogIssues("Feedback Sequence Database", sequenceDatabase ? FeedbackSequenceDatabaseValidator.Validate(sequenceDatabase) : null);
+            LogIssues("Feedback Sequence Database", sequenceDatabase ? FeedbackDefinitionValidator.Validate(sequenceDatabase) : null);
         }
 
         private static void LogIssues(string label, IReadOnlyList<FeedbackValidationIssue> issues)

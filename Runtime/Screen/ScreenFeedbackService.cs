@@ -6,7 +6,7 @@ namespace Dreamy.Feedback
     {
         private ScreenFlashView view;
 
-        public void Initialize(Transform root)
+        public void Initialize(Transform root, IFeedbackAnimationBackend backend = null)
         {
             Dispose();
             if (!root)
@@ -23,6 +23,7 @@ namespace Dreamy.Feedback
                 view = go.AddComponent<ScreenFlashView>();
             }
 
+            view.Backend = backend ?? new UnityFeedbackAnimationBackend();
             view.Ensure();
         }
 

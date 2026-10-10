@@ -1,13 +1,17 @@
 # Getting started
 
-See the package [README](../README.md) for install, sample prerequisites, ownership and migration.
+Start with the [ready-to-use sample guide](../Samples~/BasicFeedbackSample/README.md): GameFeedbackRig, FeedbackPlayer, four reward presets and game HUD setup. No generator or Economy sample is required.
 
-1. Import **Basic Feedback**, open `Generated/FeedbackDemo.unity`, press Play and try all seven channels.
-2. Install Dreamy Economy/UI/Audio and dependencies, import **Feedback Economy** and open `Generated/FeedbackEconomyDemo.unity`.
-3. Grant 100 coins, retry and close/reopen. The first grant changes balance; retry does not replay feedback.
-4. Inject your wallet, audio and feedback owner at the composition root. Observe confirmed events; keep save/reward mutations outside feedback.
-5. Initialize FeedbackHost with explicit root, databases and camera. Use UI RectTransforms under a canvas for text/icons. Dispose/shut down the owner on unloading.
+1. Install Dreamy Feedback and its UPM dependencies. Core is optional for base playback.
+2. Create a FeedbackRoot and FeedbackHost. Assign the root, roots/canvases for enabled channels, optional databases and an explicit world camera. Keep UI effect roots as RectTransforms below a configured Canvas.
+3. Create a Dreamy/Feedback/Definition asset; set a stable ID. Expand Root, choose Sequence/Parallel or a primitive, then Add child. Configure only the fields shown for each node. VFX nodes require a positive maximum Duration. Root and children are managed-reference data; do not edit shared assets during playback.
+4. Send a FeedbackRequest with source/target/world position/amount/intensity. Builder creates only request/context, never graph structure. Amount is a long; text nodes replace `{amount}`. Icon count is authored and bounded independently of amount. Intensity scales punch/shake/VFX; generic Unity vibration cannot express distinct intensity patterns.
+5. Retain handles. Stop cancels remaining steps, active primitives and delays. Complete skips waits, finishes current effects and dispatches unstarted one-shots once. It can create a presentation burst; it never grants wallet rewards. Completion resolves to Completed, Stopped or Faulted.
 
-Editor tools and sample builders use `Dreamy/Feedback`. Save open scenes before invoking builders, which create new output folders and retain user assets.
+WorldPosition is a world coordinate. FloatingText projects it through the explicit camera to its UI root. IconSource/Target are UI anchors: icon positions are transformed into the effect root's local canvas units. Spread, ArcHeight and Size remain stable under CanvasScaler; Target is followed live while anchors move.
 
-Before running either sample in a fresh project, import **Window > TextMeshPro > Import TMP Essential Resources** once. UGUI 2.0 TMP still needs its project-wide TMP Settings/default style resources in players. The sample uses its own static font and shaders, but does not ship a second `Resources/TMP Settings` asset that could conflict with your project.
+Repeated UI Punch replaces the previous session on the same transform and restores its captured scale. Camera shake replaces the previous shake on its rig and restores its captured local position. Use a camera offset root below the follow rig and above the camera. Screen Flash replaces its overlay playback. Replaced children become Stopped, which stops their composite. VFX/text/icon leases are independent.
+
+Enable DOTween by installing `com.dreamy.feedback.dotween` and its DOTween dependency, then assign DotweenFeedbackProvider. Assign the provider explicitly before initializing the host. Shipped portable rigs/scenes use the Unity backend and work without DOTween. All five icon styles are available through options: Straight, Arc, ScatterMagnet, Fountain, Spiral.
+
+Basic's shipped input module uses StandaloneInputModule: select Old Input Manager/Both or replace it in Input System-only projects. Import official TMP Essential Resources once. Generic mobile haptics respect Enabled and throttle; physical vibration still needs device validation.

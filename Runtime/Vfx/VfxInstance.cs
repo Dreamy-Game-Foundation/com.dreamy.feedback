@@ -8,11 +8,13 @@ namespace Dreamy.Feedback
     public class VfxInstance : MonoBehaviour
     {
         private Action<VfxInstance> releaseAction;
+        private Action interrupted;
         private CancellationTokenSource followCancellation;
 
-        public void Initialize(Action<VfxInstance> releaseAction)
+        public void Initialize(Action<VfxInstance> releaseAction, Action interrupted = null)
         {
             this.releaseAction = releaseAction;
+            this.interrupted = interrupted;
         }
 
         public virtual void Play()
@@ -40,6 +42,7 @@ namespace Dreamy.Feedback
 
         protected virtual void OnDisable()
         {
+            interrupted?.Invoke();
             followCancellation?.Cancel();
             followCancellation?.Dispose();
             followCancellation = null;

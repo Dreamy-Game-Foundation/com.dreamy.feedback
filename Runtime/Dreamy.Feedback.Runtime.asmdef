@@ -2,10 +2,10 @@
   "name": "Dreamy.Feedback.Runtime",
   "rootNamespace": "Dreamy.Feedback",
   "references": [
-    "Dreamy.Core.Runtime",
     "UniTask",
     "Unity.TextMeshPro",
-    "UnityEngine.UI"
+    "UnityEngine.UI",
+    "Dreamy.Feedback.Contracts"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
