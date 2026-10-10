@@ -1,10 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+- Improve definition/database authoring: node defaults, runtime-field filtering, scoped ID lookup and inline database validation.
+- Add seven common definition templates and matching portable starter assets, with setup/call examples.
+
 ## [0.3.0] - 2026-10-09
 
 - Breaking: replace legacy sequences with definition/request facade, real Sequence/Parallel completion and independent Stop/Complete handles.
 - Split engine-only contracts and optional Core integration; remove mandatory Core dependency and reward glue from FeedbackHost.
-- Add optional DOTween adapter, five icon trajectories, pooling/active budgets, owner cancellation and UI Punch.
+- Ship the optional DOTween adapter as the DOTween Feedback sample (no separate adapter package), five icon trajectories, pooling/active budgets, owner cancellation and UI Punch.
 - Replace Economy sample with a reusable game starter: GameFeedbackRig, Coin/Star/Energy/Gem reward presets, original resource icons and Inspector-friendly FeedbackPlayer.
 - Add per-request sprite override and explicit camera binding for hosts used in game scenes.
 - Remove puzzle tiles and one-off sample upgrade/generation code. Keep a standalone preview and update Foundation integration.

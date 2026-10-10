@@ -26,6 +26,11 @@
       "displayName": "Basic Feedback",
       "description": "Ready-to-use feedback rig and reward presets, plus a preview scene. No Economy/UI/Audio integration required.",
       "path": "Samples~/BasicFeedbackSample"
+    },
+    {
+      "displayName": "DOTween Feedback",
+      "description": "Optional DOTween animation adapter: five icon fly styles, UI punch, camera shake, floating text and screen flash. Install DOTween before importing.",
+      "path": "Samples~/DOTweenFeedbackSample"
     }
   ]
 }

@@ -18,3 +18,7 @@ Contracts are in `Dreamy.Feedback.Contracts`; add the assembly reference to asmd
 Reimport **Basic Feedback** into a fresh consumer. The sandbox retains the 0.2.0 import folder while using the new API. The Economy sample and one-time FeedbackSampleUpgrade tool are removed. Foundation owns its wallet observer directly; Feedback has no Economy/UI/Audio sample dependencies.
 
 Use `GameFeedbackRig` with existing game camera/HUD. `FeedbackRig` is the preview rig. `FeedbackPlayer` supports Inspector/UnityEvent setup; `.WithIcon()` overrides one request without editing its definition. `host.Initialize(camera)` binds an explicit game camera and stops/rebuilds services if the camera changes.
+
+## DOTween adapter packaging
+
+The adapter is now the optional **DOTween Feedback** sample in this package. Install DOTween, remove the old `com.dreamy.feedback.dotween` manifest dependency/testables entry, then import the sample. Preserve provider assignments; script GUIDs and assembly names are unchanged. Do not install both copies. See [sample setup](../Samples~/DOTweenFeedbackSample/README.md).

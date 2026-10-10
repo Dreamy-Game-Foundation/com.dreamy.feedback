@@ -70,9 +70,13 @@ IconSource/Target trong preset reward là **UI anchors**. World position không 
 
 - Gameplay có thể inject `IFeedbackService` hoặc từng primitive interface; không cần ServiceLocator.
 - `FeedbackServices` cho phép thay implementation primitive khi tự compose `FeedbackService`.
-- `IFeedbackAnimationBackend` và `IIconFlyAnimator` cho phép thay animation implementation. Adapter `com.dreamy.feedback.dotween` triển khai hai điểm này; API gameplay không chứa Tween/Sequence/Ease của DOTween.
+- `IFeedbackAnimationBackend` và `IIconFlyAnimator` cho phép thay animation implementation. Sample tùy chọn **DOTween Feedback** triển khai hai điểm này (cài DOTween trước, rồi import trong Package Manager → Samples); API gameplay không chứa Tween/Sequence/Ease của DOTween.
 - Graph hiện có 10 node built-in. Thêm một loại node mới cần bổ sung enum, executor và Inspector/validation; graph chưa có registry custom node cho package bên ngoài.
 
 Contracts chỉ phụ thuộc Unity engine; Runtime dùng UniTask/UGUI. Core registration nằm trong assembly integration tùy chọn. Effect có pooling và active budgets; Stop/Complete idempotent, handle cũ không tác động instance đã tái sử dụng. Các request độc lập, nhưng Punch/Shake/Flash mới thay effect trước trên cùng target/channel.
 
 Chi tiết: [semantics và authoring](Documentation~/getting-started.md), [migration 0.3](Documentation~/migration-0.3.md), [validation](VALIDATION.md).
+
+Adapter DOTween được đóng gói tại `Samples~/DOTweenFeedbackSample`, không cần repo/package riêng. Xem [hướng dẫn cài, gán provider và chỉnh icon fly](Samples~/DOTweenFeedbackSample/README.md).
+
+Tạo data nhanh: **Assets → Create → Dreamy → Feedback → Common Presets** hoặc dùng 7 asset trong `Basic Feedback/Generated/CommonPresets`. Definition có menu Add effect và lookup ID theo rig; databases có entry theo ID và validation inline. [Preset, setup tối thiểu và ví dụ gọi](Samples~/BasicFeedbackSample/README.md#tạo-và-chỉnh-data-nhanh).

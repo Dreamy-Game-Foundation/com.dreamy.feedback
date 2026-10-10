@@ -9,6 +9,27 @@ namespace Dreamy.Feedback.Tests
 {
     public sealed class FeedbackAuthoringTests
     {
+        [TestCase(FeedbackPreset.ButtonConfirm)]
+        [TestCase(FeedbackPreset.ButtonReject)]
+        [TestCase(FeedbackPreset.RewardPop)]
+        [TestCase(FeedbackPreset.ComboPopup)]
+        [TestCase(FeedbackPreset.LevelComplete)]
+        [TestCase(FeedbackPreset.SoftShake)]
+        [TestCase(FeedbackPreset.SuccessFlash)]
+        public void CommonPresetSurvivesSerializationAndValidates(FeedbackPreset preset)
+        {
+            var definition = FeedbackPresetFactory.Create(preset);
+            var copy = ScriptableObject.CreateInstance<FeedbackDefinition>();
+            try
+            {
+                EditorJsonUtility.FromJsonOverwrite(EditorJsonUtility.ToJson(definition), copy);
+                Assert.That(FeedbackGraphValidation.Validate(copy), Is.Null);
+                Assert.That(copy.Id, Is.EqualTo(definition.Id));
+                Assert.That(copy.Root.Type, Is.EqualTo(definition.Root.Type));
+                Assert.That(copy.Root.Children.Count, Is.EqualTo(definition.Root.Children.Count));
+            }
+            finally { Object.DestroyImmediate(definition); Object.DestroyImmediate(copy); }
+        }
         private static void Set(object obj, string field, object value) => obj.GetType().GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(obj, value);
         [Test] public void CameraOptionsRoundTripThroughUnitySerialization()
         {

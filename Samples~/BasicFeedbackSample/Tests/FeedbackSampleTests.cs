@@ -14,6 +14,46 @@ namespace Dreamy.Feedback.Samples.Tests
 {
     public sealed class FeedbackSampleTests
     {
+        [UnityTest] public IEnumerator CommonPresetsPlayWithStarterRigAndSupportStopComplete()
+        {
+#if UNITY_EDITOR
+            var guid = System.Array.Find(AssetDatabase.FindAssets("GameFeedbackRig t:Prefab"),
+                id => AssetDatabase.GUIDToAssetPath(id).Contains("Basic Feedback"));
+            Assert.That(guid, Is.Not.Null);
+            var path = AssetDatabase.GUIDToAssetPath(guid);
+            var instance = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(path));
+            var cameraObject = new GameObject("Preset test camera", typeof(Camera));
+            var anchor = new GameObject("Preset test HUD", typeof(RectTransform));
+            try
+            {
+                var host = instance.GetComponent<FeedbackHost>();
+                host.Initialize(cameraObject.GetComponent<Camera>());
+                Assert.That(host.Vfx, Is.Not.Null);
+                Assert.That(host.FloatingText, Is.Not.Null);
+                string folder = Path.GetDirectoryName(path).Replace("\\", "/") + "/CommonPresets";
+                var definitions = AssetDatabase.FindAssets("t:FeedbackDefinition", new[] { folder });
+                Assert.That(definitions.Length, Is.EqualTo(7));
+                foreach (var definitionGuid in definitions)
+                {
+                    var definition = AssetDatabase.LoadAssetAtPath<FeedbackDefinition>(AssetDatabase.GUIDToAssetPath(definitionGuid));
+                    Assert.That(FeedbackGraphValidation.Validate(definition), Is.Null, definition.name);
+                    var request = FeedbackRequestBuilder.For(definition).From(anchor).To(anchor.transform)
+                        .At(Vector3.zero).WithAmount(3).Build();
+                    var handle = host.Feedback.Play(request);
+                    float deadline = Time.realtimeSinceStartup + 4;
+                    while (handle.IsRunning && Time.realtimeSinceStartup < deadline) yield return null;
+                    Assert.That(handle.Status, Is.EqualTo(FeedbackStatus.Completed), definition.name);
+                    handle = host.Feedback.Play(request); handle.Complete();
+                    Assert.That(handle.Status, Is.EqualTo(FeedbackStatus.Completed), definition.name);
+                    handle = host.Feedback.Play(request); handle.Stop();
+                    Assert.That(handle.Status, Is.EqualTo(FeedbackStatus.Stopped), definition.name);
+                }
+            }
+            finally { Object.Destroy(instance); Object.Destroy(cameraObject); Object.Destroy(anchor); }
+#else
+            Assert.Ignore("Preset assets are loaded through AssetDatabase."); yield return null;
+#endif
+        }
         [UnityTest] public IEnumerator BasicScenePlaysAllChannelsAndClears()
         {
 #if UNITY_EDITOR

@@ -74,7 +74,7 @@ Icon fly giữa hai UI Canvas overlay dùng vị trí RectTransform. Nếu rewar
 
 ## DOTween
 
-Cài `com.dreamy.feedback.dotween` cùng DOTween. Thêm `DotweenFeedbackProvider` lên rig rồi gán vào Host → Animation Provider **trước khi bật rig/chạy game**. Bản sample dùng chung chạy bằng backend Unity khi không có adapter; tất cả 5 trajectory vẫn có sẵn. Backend DOTween dùng tween/sequence nội bộ, gameplay vẫn nhận FeedbackHandle.
+Cài DOTween trước, rồi import sample **DOTween Feedback** trong Package Manager → Dreamy Feedback → Samples. Thêm `DotweenFeedbackProvider` lên rig rồi gán vào Host → Animation Provider **trước khi bật rig/chạy game**. Bản sample dùng chung chạy bằng backend Unity khi không có adapter; tất cả 5 trajectory vẫn có sẵn. Backend DOTween dùng tween/sequence nội bộ, gameplay vẫn nhận FeedbackHandle.
 
 ## Preview và troubleshooting
 
@@ -87,3 +87,42 @@ Mở FeedbackDemo và Play. Bốn nút resource phát các reward preset; các n
 - Effect cũ dừng khi play mới: Punch cùng target, Camera Shake và Screen Flash có chính sách replace. VFX/text/icon có lượt độc lập và pooling.
 
 Sandbox giữ font/confetti bạn chọn cho preview nội bộ. Bản `Samples~` có Liberation Sans (OFL, xem FontLicense.txt), VFX mặc định và icon resource riêng để import độc lập; không cần bộ Hyper Casual FX.
+
+## Tạo và chỉnh data nhanh
+
+Cách ít setup nhất: dùng GameFeedbackRig + duplicate preset có sẵn + FeedbackPlayer. Rig đã có databases; bạn chỉ gán Definition, Icon Source/Target khi cần. Không cần tạo database cho từng definition, cũng không cần database cho UI Punch, Icon Fly, Screen Flash hay Camera Shake node (shake node lưu options trực tiếp).
+
+`Generated/CommonPresets/` có thêm các asset:
+
+| Preset | Effect | Dữ liệu khi gọi |
+| --- | --- | --- |
+| ButtonConfirm | Punch + Success haptic | `To(button)` |
+| ButtonReject | Punch nhẹ + Warning haptic | `To(button)` |
+| RewardPop | VFX reward + text `+{amount}` + haptic | `At(worldPosition)`, `WithAmount(amount)`; camera cho text |
+| ComboPopup | Text `Combo x{amount}` + haptic | `At(worldPosition)`, `WithAmount(combo)`; camera cho text |
+| LevelComplete | VFX + flash + Success haptic, rồi Delay + punch | `At(worldPosition)`, `To(continueButton)` |
+| SoftShake | Rung camera nhẹ | Gán camera game vào Host |
+| SuccessFlash | Flash xanh nhẹ + Success haptic | Không cần anchor |
+
+Các preset reuse VFX ID `reward` và text ID `default` trong rig. Các optional node sẽ được bỏ qua nếu thiếu service/target; bật Required nếu effect đó bắt buộc. VFX và floating text cần world position, không phải vị trí RectTransform. Đây là preset animation thông dụng, không phải bộ VFX/art mới.
+
+Tạo asset riêng bằng **Assets → Create → Dreamy → Feedback → Common Presets**. Menu tạo asset mới trong thư mục đang chọn; chỉnh ID riêng nếu dùng nhiều biến thể. Graph được lưu trong asset; factory chỉ chạy ở Editor.
+
+Trong Definition Inspector:
+
+- **Add effect…** chọn node và nhận các giá trị mặc định. Đổi Type sẽ reset options của node đó về mặc định; Undo để khôi phục nếu đổi nhầm.
+- IconFly chỉ hiện sprite/animation; source và target được truyền lúc Play. Unscaled Time đặt ở Definition, không cần lặp lại trên từng node.
+- **Lookup IDs from rig** là tùy chọn: kéo Host vào để chọn VFX/text ID từ đúng database và thấy cảnh báo ID thiếu. Reference này chỉ dùng trong Editor, không lưu vào Definition.
+- Dùng Up/Down/Remove để sắp xếp graph. Sequence chờ từng bước; Parallel chạy đồng thời. Duration của VFX là thời gian tối đa chờ effect.
+
+Database Inspector hiển thị entry theo ID, thêm/xóa/đổi thứ tự và validation ngay trong Inspector. Khi thêm VFX entry, chỉ cần ID + prefab; Prewarm Count có thể để 0. Fixed Lifetime chỉ hiện khi chọn chế độ FixedLifetime. Floating text entry cần prefab có FloatingTextInstance/TMP; duplicate database sample nếu muốn giữ font và style mặc định.
+
+Ví dụ phát combo sau khi gameplay xác nhận:
+
+```csharp
+host.Initialize(gameCamera); // bind camera ở bước setup
+host.Feedback.Play(FeedbackRequestBuilder.For(comboPopup)
+    .From(this).At(matchPosition).WithAmount(comboCount).Build());
+```
+
+Ví dụ phản hồi button bằng Inspector: thêm FeedbackPlayer vào button, gán Host + ButtonConfirm + Target là RectTransform của button; nối Button.onClick → FeedbackPlayer.Play(). Không cần script mới.

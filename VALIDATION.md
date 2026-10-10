@@ -1,3 +1,24 @@
+# Editor authoring and common presets — 2026-10-10
+
+- Definition Inspector adds type-aware node defaults, filtered runtime-only fields, Up/Down ordering and optional VFX/text ID lookup scoped to a selected rig. Lookup does not serialize a Host reference into the asset.
+- VFX/text/shake database inspectors show named entries and existing validators inline. Adding an entry clears inherited prefab/ID and resets defaults; fixed lifetime is conditional.
+- Seven common templates and matching native Unity assets ship under Basic Feedback `Generated/CommonPresets`. They reuse existing `reward`/`default` databases; no runtime API or database schema change.
+- Isolated base consumer without Core/DOTween: **11/11 EditMode passed**, including all template serialization round-trips; **25/25 PlayMode passed**, including normal completion, Stop and Complete of all seven saved presets on GameFeedbackRig.
+- Unity recompilation completed with no C# errors. Inspector interaction/visual layout was not manually reviewed; no player build was repeated for these Editor/data changes.
+
+Evidence: sandbox `.omo/evidence/feedback-authoring/` (`editmode.xml`, `playmode.xml`, `summary.json`).
+
+# DOTween sample packaging verification — 2026-10-10
+
+DOTween adapter now ships as **DOTween Feedback**, at `Samples~/DOTweenFeedbackSample` inside `com.dreamy.feedback`. This supersedes references to a separate adapter package in historical results below. Sandbox imports the sample under Assets; manifest and lock contain no `com.dreamy.feedback.dotween` dependency or testables entry.
+
+- Clean consumer with DOTween installed and adapter imported under Assets: **26/26 PlayMode passed**, including all three adapter tests (five icon trajectories, lease release, Stop/Complete and destroyed destination).
+- Base consumer without DOTween or adapter import: **24/24 PlayMode passed**.
+- Runtime/test code, script GUIDs and assembly names are unchanged from the previous adapter. Unity resolves DotweenFeedbackProvider to the imported sample path; compilation is complete.
+- Package Manager exposes Basic Feedback and DOTween Feedback independently. Install DOTween before importing its adapter sample; do not keep the old adapter package installed alongside the sample.
+
+Evidence: sandbox `.omo/evidence/feedback-dotween-sample/` (`dotween-sample-playmode.xml`, `base-playmode.xml`, `summary.json`). Existing Console entries about DOTweenSettings creation inside Library/PackageCache are separate distribution setup errors; these consumer test runs pass. No player build was repeated for this packaging-only change.
+
 # Current starter sample verification — 2026-10-09
 
 This section supersedes the earlier sample design and counts below. Local working tree, Unity 6000.4.12f1 Linux; no published tag.
