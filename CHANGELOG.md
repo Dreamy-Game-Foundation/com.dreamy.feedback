@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+- Simplify SO authoring: shared ID base, Definition mode/list with per-step delay, no preset inheritance or SO overrides; retain hidden legacy graph reader for migration.
+- Add per-type SO-reference databases, primitive ID lookup, direct VFX overloads, typed IconFly runtime args and runtime-only component/step bindings.
+- Organize sample Effects/Definitions/Databases/Rigs/Scenes without changing asset GUIDs; keep seven effect SO and four icons, plus one necessary nested Definition.
+- Add seven per-effect ScriptableObject types, direct-asset requests, immutable playback snapshots, runtime request customization and optional libraries.
+- Add drag-and-drop graph authoring, inline-to-SO migration preview, scoped migration and UniTask WaitAsync with independent wait cancellation.
+- Keep existing inline/ID APIs and engine-only Contracts; SO VFX/text do not require database registration.
+- Reuse exactly seven starter effect SO and the four existing icons; convert portable definitions and bind fourteen demo previews through serialized entries.
+- Repair VFX/text prefab file references, preserve independent pool leases and stop later Parallel one-shots after synchronous required failure.
+- Show unavailable/terminal states and unsupported desktop haptics in the demo; add real raycast button/reopen regressions.
+- Restore sample text rendering in the clean Built-in consumer with explicit clipping, depth and culling defaults.
 - Improve definition/database authoring: node defaults, runtime-field filtering, scoped ID lookup and inline database validation.
 - Add seven common definition templates and matching portable starter assets, with setup/call examples.
 

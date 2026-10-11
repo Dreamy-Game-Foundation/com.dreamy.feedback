@@ -3,8 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 namespace Dreamy.Feedback
 {
-    public sealed class UiFeedbackService : IUiFeedbackService, IDisposable
+    public sealed class UiFeedbackService : IFeedbackAssetLookup, IUiFeedbackService, IDisposable
     {
+        private UiPunchDatabase assetDatabase;
+        public void SetDatabase(UiPunchDatabase value) { if (value) value.Rebuild(); assetDatabase = value; }
+        public FeedbackAsset FindAsset(string id) => assetDatabase && assetDatabase.TryGetAsset(id, out var asset) ? asset : null;
+
         private readonly Dictionary<Transform, FeedbackHandle> active = new Dictionary<Transform, FeedbackHandle>();
         private readonly IFeedbackAnimationBackend backend;
         public UiFeedbackService(IFeedbackAnimationBackend backend) { this.backend = backend; }

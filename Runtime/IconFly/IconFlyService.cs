@@ -4,8 +4,12 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 namespace Dreamy.Feedback
 {
-    public sealed class IconFlyService : IIconFlyService, IDisposable
+    public sealed class IconFlyService : IFeedbackAssetLookup, IIconFlyService, IDisposable
     {
+        private IconFlyDatabase assetDatabase;
+        public void SetDatabase(IconFlyDatabase value) { if (value) value.Rebuild(); assetDatabase = value; }
+        public FeedbackAsset FindAsset(string id) => assetDatabase && assetDatabase.TryGetAsset(id, out var asset) ? asset : null;
+
         private readonly Stack<IconFlyInstance> pool = new Stack<IconFlyInstance>();
         private readonly HashSet<IconFlyInstance> instances = new HashSet<IconFlyInstance>();
         private readonly HashSet<FeedbackHandle> groups = new HashSet<FeedbackHandle>();

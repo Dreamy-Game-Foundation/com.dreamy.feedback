@@ -69,19 +69,19 @@ namespace Dreamy.Feedback.Editor
             return definition;
         }
 
-        [MenuItem("Assets/Create/Dreamy/Feedback/Common Presets/Button Confirm")]
+        [MenuItem("Dreamy/Feedback/Legacy Templates/Button Confirm")]
         private static void Confirm() => Save(FeedbackPreset.ButtonConfirm);
-        [MenuItem("Assets/Create/Dreamy/Feedback/Common Presets/Button Reject")]
+        [MenuItem("Dreamy/Feedback/Legacy Templates/Button Reject")]
         private static void Reject() => Save(FeedbackPreset.ButtonReject);
-        [MenuItem("Assets/Create/Dreamy/Feedback/Common Presets/Reward Pop")]
+        [MenuItem("Dreamy/Feedback/Legacy Templates/Reward Pop")]
         private static void Reward() => Save(FeedbackPreset.RewardPop);
-        [MenuItem("Assets/Create/Dreamy/Feedback/Common Presets/Combo Popup")]
+        [MenuItem("Dreamy/Feedback/Legacy Templates/Combo Popup")]
         private static void Combo() => Save(FeedbackPreset.ComboPopup);
-        [MenuItem("Assets/Create/Dreamy/Feedback/Common Presets/Level Complete")]
+        [MenuItem("Dreamy/Feedback/Legacy Templates/Level Complete")]
         private static void Win() => Save(FeedbackPreset.LevelComplete);
-        [MenuItem("Assets/Create/Dreamy/Feedback/Common Presets/Soft Shake")]
+        [MenuItem("Dreamy/Feedback/Legacy Templates/Soft Shake")]
         private static void Shake() => Save(FeedbackPreset.SoftShake);
-        [MenuItem("Assets/Create/Dreamy/Feedback/Common Presets/Success Flash")]
+        [MenuItem("Dreamy/Feedback/Legacy Templates/Success Flash")]
         private static void Flash() => Save(FeedbackPreset.SuccessFlash);
 
         private static void Save(FeedbackPreset preset)

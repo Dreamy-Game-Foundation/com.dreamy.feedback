@@ -2,8 +2,12 @@ using UnityEngine;
 
 namespace Dreamy.Feedback
 {
-    public sealed class ScreenFeedbackService : IScreenFeedbackService, System.IDisposable
+    public sealed class ScreenFeedbackService : IFeedbackAssetLookup, IScreenFeedbackService, System.IDisposable
     {
+        private ScreenFlashDatabase assetDatabase;
+        public void SetDatabase(ScreenFlashDatabase value) { if (value) value.Rebuild(); assetDatabase = value; }
+        public FeedbackAsset FindAsset(string id) => assetDatabase && assetDatabase.TryGetAsset(id, out var asset) ? asset : null;
+
         private ScreenFlashView view;
 
         public void Initialize(Transform root, IFeedbackAnimationBackend backend = null)

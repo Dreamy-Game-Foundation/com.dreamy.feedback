@@ -6,14 +6,19 @@ using UnityEngine;
 
 namespace Dreamy.Feedback
 {
-    public sealed class VfxService : IVfxService, IDisposable
+    public sealed class VfxService : IFeedbackAssetLookup, IVfxService, IVfxPresetService, IDisposable
     {
+        private VfxDatabase assetDatabase;
+        public void SetDatabase(VfxDatabase value) { if (value) value.Rebuild(); assetDatabase = value; }
+        public FeedbackAsset FindAsset(string id) => assetDatabase && assetDatabase.TryGetAsset(id, out var asset) ? asset : null;
+
         private readonly Dictionary<GameObject, Stack<VfxInstance>> pools = new Dictionary<GameObject, Stack<VfxInstance>>();
         private readonly Dictionary<VfxInstance, GameObject> prefabByInstance = new Dictionary<VfxInstance, GameObject>();
         private readonly Dictionary<VfxInstance, CancellationTokenSource> despawnTokens = new Dictionary<VfxInstance, CancellationTokenSource>();
         private readonly Dictionary<VfxInstance, long> active = new Dictionary<VfxInstance, long>();
         private readonly Dictionary<VfxInstance, FeedbackPlayback> playback = new Dictionary<VfxInstance, FeedbackPlayback>();
         public int MaximumActiveVfx { get; set; } = 64;
+        private readonly HashSet<GameObject> prewarmed = new HashSet<GameObject>();
         private long generation;
         private VfxDatabase database;
         private Transform root;
@@ -21,7 +26,7 @@ namespace Dreamy.Feedback
         public void Initialize(VfxDatabase database, Transform root)
         {
             Clear();
-            this.database = database;
+            this.database = database; SetDatabase(database);
             this.root = root;
             Prewarm();
         }
@@ -33,6 +38,7 @@ namespace Dreamy.Feedback
 
         public FeedbackHandle Play(string id, VfxPlayOptions options)
         {
+            if (FindAsset(id) is VfxFeedbackAsset preset) return this.Play(preset, options);
             if (active.Count >= MaximumActiveVfx) return default;
             if (!database)
             {
@@ -52,10 +58,27 @@ namespace Dreamy.Feedback
                 return default;
             }
 
-            var instance = Get(entry.Prefab);
+            return PlayPrefab(entry.Prefab, options, entry.DespawnMode, entry.FixedLifetime);
+        }
+
+        public FeedbackHandle Play(VfxFeedbackSettings settings, VfxPlayOptions options)
+        {
+            if (!root || !settings.Prefab || active.Count >= MaximumActiveVfx ||
+                !Finite(settings.MaximumDuration) || settings.MaximumDuration <= 0 || !Finite(settings.Scale) || settings.Scale < 0) return default;
+            if (settings.Scale == 0) return FeedbackHandle.Completed;
+            PrewarmPrefab(settings.Prefab, settings.PrewarmCount);
+            options.Scale = (options.Scale == 0 ? 1 : options.Scale) * settings.Scale;
+            return PlayPrefab(settings.Prefab, options, VfxDespawnMode.FixedLifetime, settings.MaximumDuration);
+        }
+
+        private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+        private FeedbackHandle PlayPrefab(GameObject prefab, VfxPlayOptions options, VfxDespawnMode mode, float lifetime)
+        {
+            if (!root || !Finite(options.Scale)) return default;
+            var instance = Get(prefab);
             var parent = options.Parent ? options.Parent : root;
             instance.transform.SetParent(parent, false);
-            instance.transform.localScale = entry.Prefab.transform.localScale * (options.Scale == 0 ? 1 : options.Scale);
+            instance.transform.localScale = prefab.transform.localScale * (options.Scale == 0 ? 1 : options.Scale);
             instance.transform.rotation = options.Rotation == default ? Quaternion.identity : options.Rotation;
             if (options.UseLocalPosition)
             {
@@ -78,7 +101,7 @@ namespace Dreamy.Feedback
                 instance.Follow(options.FollowTarget);
             }
 
-            ScheduleDespawn(instance, entry, options.UnscaledTime);
+            ScheduleDespawn(instance, mode, lifetime, options.UnscaledTime);
             return state.Handle;
         }
 
@@ -97,11 +120,15 @@ namespace Dreamy.Feedback
                     continue;
                 }
 
-                for (var j = 0; j < Mathf.Clamp(entry.PrewarmCount,0,64); j++)
-                {
-                    var instance = Create(entry.Prefab); active[instance] = ++generation; Release(instance);
-                }
+                PrewarmPrefab(entry.Prefab, entry.PrewarmCount);
             }
+        }
+
+        private void PrewarmPrefab(GameObject prefab, int count)
+        {
+            if (!prewarmed.Add(prefab)) return;
+            for (int i = 0; i < Mathf.Clamp(count, 0, 64); i++)
+            { var instance = Create(prefab); active[instance] = ++generation; Release(instance); }
         }
 
         public void Clear()
@@ -115,7 +142,7 @@ namespace Dreamy.Feedback
                 instance.gameObject.SetActive(false);
                 UnityEngine.Object.Destroy(instance.gameObject);
             }
-            prefabByInstance.Clear();
+            prefabByInstance.Clear(); prewarmed.Clear();
         }
         public void Dispose() { Clear(); database = null; root = null; }
 
@@ -174,22 +201,21 @@ namespace Dreamy.Feedback
             pool.Push(instance);
         }
 
-        private void ScheduleDespawn(VfxInstance instance, VfxEntry entry, bool unscaled)
+        private void ScheduleDespawn(VfxInstance instance, VfxDespawnMode mode, float lifetime, bool unscaled)
         {
-            if (entry.DespawnMode == VfxDespawnMode.Manual)
+            if (mode == VfxDespawnMode.Manual)
             {
                 return;
             }
 
-            var lifetime = entry.FixedLifetime;
-            if (entry.DespawnMode == VfxDespawnMode.ParticleDuration && instance is ParticleVfxInstance particleVfx)
+            if (mode == VfxDespawnMode.ParticleDuration && instance is ParticleVfxInstance particleVfx)
             {
                 lifetime = particleVfx.GetDuration();
             }
 
             if (lifetime <= 0f)
             {
-                Debug.LogWarning($"VFX id '{entry.Id}' has invalid lifetime.");
+                Debug.LogWarning("VFX has invalid lifetime.");
                 return;
             }
 

@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Dreamy.Feedback
 {
     [CreateAssetMenu(menuName = "Dreamy/Feedback/Floating Text Database", fileName = "FloatingTextDatabase")]
-    public sealed class FloatingTextDatabase : ScriptableObject
+    public sealed class FloatingTextDatabase : FeedbackAssetDatabase<FloatingTextFeedbackAsset>
     {
         [SerializeField] private List<FloatingTextEntry> entries = new List<FloatingTextEntry>();
 

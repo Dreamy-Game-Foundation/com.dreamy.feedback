@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Dreamy.Feedback
 {
     [CreateAssetMenu(menuName = "Dreamy/Feedback/VFX Database", fileName = "VfxDatabase")]
-    public sealed class VfxDatabase : ScriptableObject
+    public sealed class VfxDatabase : FeedbackAssetDatabase<VfxFeedbackAsset>
     {
         [SerializeField] private List<VfxEntry> entries = new List<VfxEntry>();
 

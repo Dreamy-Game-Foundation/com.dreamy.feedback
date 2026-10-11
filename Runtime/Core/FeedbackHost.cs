@@ -8,6 +8,11 @@ namespace Dreamy.Feedback
         [SerializeField] private VfxDatabase vfxDatabase;
         [SerializeField] private FloatingTextDatabase floatingTextDatabase;
         [SerializeField] private CameraShakeDatabase cameraShakeDatabase;
+        [SerializeField] private IconFlyDatabase iconFlyDatabase;
+        [SerializeField] private UiPunchDatabase uiPunchDatabase;
+        [SerializeField] private ScreenFlashDatabase screenFlashDatabase;
+        [SerializeField] private HapticDatabase hapticDatabase;
+        [SerializeField] private DefinitionDatabase definitionDatabase;
         [SerializeField] private Camera worldCamera;
         [SerializeField] private FeedbackAnimationProvider animationProvider;
         [SerializeField] private bool haptics = true;
@@ -36,14 +41,16 @@ namespace Dreamy.Feedback
             var backend = animationProvider ? animationProvider.CreateBackend() : new UnityFeedbackAnimationBackend();
             try
             {
-                if (vfxDatabase) { Vfx = new VfxService(); Vfx.Initialize(vfxDatabase,root.WorldVfxRoot); }
+                Vfx = new VfxService(); Vfx.Initialize(vfxDatabase,root.WorldVfxRoot);
                 if (haptics) Haptic = new HapticService();
-                if (floatingTextDatabase) { FloatingText = new FloatingTextService(); FloatingText.Initialize(floatingTextDatabase,root.FloatingTextRoot,worldCamera,backend); }
+                FloatingText = new FloatingTextService(); FloatingText.Initialize(floatingTextDatabase,root.FloatingTextRoot,worldCamera,backend);
                 if (iconFly) { IconFly = new IconFlyService(); IconFly.Initialize(root.IconFlyRoot,animationProvider ? animationProvider.CreateIconAnimator(backend) : new UnityIconFlyAnimator(backend)); }
                 if (screenFlash) { Screen = new ScreenFeedbackService(); Screen.Initialize(root.ScreenFeedbackRoot,backend); }
                 if (worldCamera) { CameraShake = new CameraShakeService(); CameraShake.Initialize(cameraShakeDatabase,worldCamera,backend,worldCamera.transform.IsChildOf(root.CameraRoot) ? root.CameraRoot : worldCamera.transform); }
                 Ui = new UiFeedbackService(backend);
                 Feedback = new FeedbackService(new FeedbackServices { Vfx = Vfx, Haptic = Haptic, FloatingText = FloatingText, IconFly = IconFly, Screen = Screen, CameraShake = CameraShake, Ui = Ui },backend);
+                Haptic?.SetDatabase(hapticDatabase); IconFly?.SetDatabase(iconFlyDatabase); Ui?.SetDatabase(uiPunchDatabase);
+                Screen?.SetDatabase(screenFlashDatabase); Feedback.SetDatabase(definitionDatabase);
             }
             catch { Shutdown(); throw; }
         }

@@ -5,8 +5,12 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 namespace Dreamy.Feedback
 {
-    public sealed class FeedbackService : IFeedbackService, IDisposable
+    public sealed class FeedbackService : IFeedbackAssetLookup, IFeedbackService, IDisposable
     {
+        private DefinitionDatabase assetDatabase;
+        public void SetDatabase(DefinitionDatabase value) { if (value) value.Rebuild(); assetDatabase = value; }
+        public FeedbackAsset FindAsset(string id) => assetDatabase && assetDatabase.TryGetAsset(id, out var asset) ? asset : null;
+
         private readonly FeedbackServices services;
         private readonly IFeedbackAnimationBackend backend;
         private readonly List<FeedbackHandle> active = new List<FeedbackHandle>();
@@ -17,16 +21,51 @@ namespace Dreamy.Feedback
         public FeedbackHandle Play(FeedbackRequest request)
         {
             active.RemoveAll(h => !h.IsRunning);
-            if (disposed || !request.Definition || request.Cancellation.IsCancellationRequested || active.Count >= MaximumActive) return FeedbackHandle.Invalid;
+            if (disposed || (!request.Definition && !request.Effect) || request.Cancellation.IsCancellationRequested || active.Count >= MaximumActive) return FeedbackHandle.Invalid;
             if (!ReferenceEquals(request.Context.Source,null) && !request.Context.Source) return default;
-            string error = FeedbackGraphValidation.Validate(request.Definition);
-            if (error != null) { Debug.LogWarning(error, request.Definition); return FeedbackHandle.Invalid; }
-            var execution = new NodeExecution(request.Definition.Root, request, services, backend);
+            if (request.Context.Source is Behaviour owner && !owner.isActiveAndEnabled ||
+                request.Context.Source is GameObject ownerObject && !ownerObject.activeInHierarchy) return default;
+            FeedbackNode snapshot;
+            try
+            {
+                snapshot = FeedbackGraphResolver.Resolve(request.Definition ? request.Definition.Resolve() : FeedbackNode.From(request.Effect), request.Overrides);
+                ApplyBindings(snapshot, request.Bindings);
+                ApplyRuntime(snapshot, request.Context);
+                string error = FeedbackGraphValidation.ValidateNode(snapshot);
+                if (error != null) { Debug.LogWarning(error, request.Definition ? (UnityEngine.Object)request.Definition : request.Effect); return default; }
+            }
+            catch (Exception e) { Debug.LogWarning(e.Message); return default; }
+            var execution = new NodeExecution(snapshot, request, services, backend);
             var handle = execution.State.Handle;
             active.Add(handle);
             execution.Start();
             ObserveOwner(handle, request).Forget();
             return handle;
+        }
+        private static void ApplyBindings(FeedbackNode root, FeedbackStepBinding[] bindings)
+        {
+            if (bindings == null) return;
+            var paths = new HashSet<string>();
+            foreach (var binding in bindings)
+            {
+                if (binding == null || string.IsNullOrEmpty(binding.Path) || !paths.Add(binding.Path)) throw new InvalidOperationException("Invalid or duplicate step binding path.");
+                var node = Find(root, binding.Path);
+                if (node == null || node.Type == FeedbackNodeType.Sequence || node.Type == FeedbackNodeType.Parallel) throw new InvalidOperationException("Binding path must point to an effect step: " + binding.Path);
+                binding.Overrides.Apply(node); node.RuntimeContext = binding.Context;
+            }
+        }
+        private static FeedbackNode Find(FeedbackNode node, string path)
+        {
+            if (node.StepPath == path) return node;
+            if (node.Children != null) foreach (var child in node.Children) { var found = Find(child, path); if (found != null) return found; }
+            return null;
+        }
+        private static void ApplyRuntime(FeedbackNode node, FeedbackContext context)
+        {
+            var c = node.RuntimeContext ?? context;
+            if (node.Type == FeedbackNodeType.IconFly) { if (c.Icon) node.IconFly.Icon = c.Icon; if (c.IconCount.HasValue) node.IconFly.Count = c.IconCount.Value; }
+            if (node.Type == FeedbackNodeType.FloatingText && c.Text != null) node.Text = c.Text;
+            if (node.Children != null) foreach (var child in node.Children) ApplyRuntime(child, c);
         }
         private static async UniTaskVoid ObserveOwner(FeedbackHandle handle, FeedbackRequest request)
         {
@@ -73,7 +112,7 @@ namespace Dreamy.Feedback
                         if (!primitive.IsValid)
                         {
                             if (node.Required) { State.Fail(); return; }
-                            Debug.LogWarning($"Feedback '{request.Definition.Id}' skipped optional {node.Type} '{node.Id}'.");
+                            Debug.LogWarning($"Feedback '{request.Id}' skipped optional {node.Type} '{node.Id}'.");
                             State.Finish(); return;
                         }
                         ObservePrimitive().Forget();
@@ -105,7 +144,14 @@ namespace Dreamy.Feedback
             }
             private async UniTaskVoid RunParallel()
             {
-                foreach (var child in children) { child.Start(); WatchSibling(child).Forget(); }
+                foreach (var child in children)
+                {
+                    if (State.Status != FeedbackStatus.Running) return;
+                    child.Start();
+                    if (child.State.Status == FeedbackStatus.Faulted || child.State.Status == FeedbackStatus.Stopped)
+                    { Propagate(child.State.Status); return; }
+                    WatchSibling(child).Forget();
+                }
                 foreach (var child in children)
                 {
                     var result = await child.State.Completion.AsUniTask();
@@ -119,7 +165,13 @@ namespace Dreamy.Feedback
                 var result = await child.State.Completion.AsUniTask();
                 if (result != FeedbackStatus.Completed) Propagate(result);
             }
-            private void StopChildren() { primitive.Stop(); foreach (var child in children) child.State.Stop(); }
+            private void StopChildren()
+            {
+                Exception error = null;
+                try { primitive.Stop(); } catch (Exception e) { error = e; }
+                foreach (var child in children) try { child.State.Stop(); } catch (Exception e) { error = e; }
+                if (error != null) throw error;
+            }
             private void CompleteChildren()
             {
                 if (children.Count > 0)
@@ -128,13 +180,16 @@ namespace Dreamy.Feedback
             }
             private FeedbackHandle Dispatch()
             {
-                var c = request.Context;
+                var c = node.RuntimeContext ?? request.Context;
                 switch (node.Type)
                 {
-                    case FeedbackNodeType.Delay: return backend.Animate(node.Duration, request.Definition.UnscaledTime, FeedbackEase.Linear, _ => { });
+                    case FeedbackNodeType.Delay: return backend.Animate(node.Duration, request.UnscaledTime, FeedbackEase.Linear, _ => { });
                     case FeedbackNodeType.Vfx:
                         if(c.Intensity <= 0) return FeedbackHandle.Completed;
-                        var vfx = services.Vfx?.Play(node.Id, new VfxPlayOptions { Position = c.WorldPosition, Parent = c.Parent, FollowTarget = c.FollowTarget, Scale = c.Intensity, UnscaledTime = request.Definition.UnscaledTime }) ?? default;
+                        var vfxOptions = new VfxPlayOptions { Position = c.WorldPosition, Parent = c.Parent, FollowTarget = c.FollowTarget, Scale = c.Intensity, UnscaledTime = request.UnscaledTime };
+                        var vfx = node.DirectAsset
+                            ? (services.Vfx as IVfxPresetService)?.Play(node.VfxSettings, vfxOptions) ?? default
+                            : services.Vfx?.Play(node.Id, vfxOptions) ?? default;
                         if (vfx.IsValid && node.Duration > 0) return Limit(vfx, node.Duration);
                         return vfx;
                     case FeedbackNodeType.Haptic:
@@ -142,22 +197,28 @@ namespace Dreamy.Feedback
                         if (c.Intensity > 0) services.Haptic.Play(node.Haptic);
                         return FeedbackHandle.Completed;
                     case FeedbackNodeType.FloatingText:
-                        return services.FloatingText?.Play((node.Text ?? "").Replace("{amount}", c.Amount.ToString(CultureInfo.InvariantCulture)), c.WorldPosition,
-                            new FloatingTextOptions { StyleId = node.Id, UnscaledTime = request.Definition.UnscaledTime }) ?? default;
+                        var text = (node.Text ?? "").Replace("{amount}", c.Amount.ToString(CultureInfo.InvariantCulture));
+                        return node.DirectAsset
+                            ? (services.FloatingText as IFloatingTextPresetService)?.Play(node.TextSettings, text, c.WorldPosition, request.UnscaledTime) ?? default
+                            : services.FloatingText?.Play(text, c.WorldPosition, new FloatingTextOptions
+                            { StyleId = node.Id, UnscaledTime = request.UnscaledTime,
+                                Color = (node.Overrides.Fields & FeedbackOverrideFields.Color) != 0 ? node.TextSettings.Color : (Color?)null,
+                                Duration = (node.Overrides.Fields & FeedbackOverrideFields.Duration) != 0 ? node.TextSettings.Duration : (float?)null }) ?? default;
                     case FeedbackNodeType.IconFly:
+                        if (node.IconFly.Count == 0) return FeedbackHandle.Completed;
                         if (!c.Target || !c.IconSource || services.IconFly == null) return default;
                         var icons = node.IconFly; icons.StartPosition = c.IconSource.position; icons.EndPosition = c.Target.position;
                         if (c.Icon) icons.Icon = c.Icon;
-                        icons.Target = c.Target; icons.UnscaledTime = request.Definition.UnscaledTime;
+                        icons.Target = c.Target; icons.UnscaledTime = request.UnscaledTime;
                         return services.IconFly.Fly(icons);
                     case FeedbackNodeType.UiPunch:
-                        var punch = node.Punch; punch.Strength *= c.Intensity; punch.UnscaledTime = request.Definition.UnscaledTime;
+                        var punch = node.Punch; punch.Strength *= c.Intensity; punch.UnscaledTime = request.UnscaledTime;
                         return services.Ui?.Punch(c.Target, punch) ?? default;
                     case FeedbackNodeType.CameraShake:
-                        var shake = node.Shake; shake.Amplitude *= c.Intensity; shake.UnscaledTime = request.Definition.UnscaledTime;
+                        var shake = node.Shake; shake.Amplitude *= c.Intensity; shake.UnscaledTime = request.UnscaledTime;
                         return services.CameraShake?.Shake(shake) ?? default;
                     case FeedbackNodeType.ScreenFlash:
-                        var flash = node.Flash; flash.UnscaledTime = request.Definition.UnscaledTime;
+                        var flash = node.Flash; flash.UnscaledTime = request.UnscaledTime;
                         return services.Screen?.Flash(flash) ?? default;
                     default: return default;
                 }
@@ -165,7 +226,7 @@ namespace Dreamy.Feedback
             private FeedbackHandle Limit(FeedbackHandle effect, float duration)
             {
                 var p = new FeedbackPlayback();
-                var timer = backend.Animate(duration, request.Definition.UnscaledTime, FeedbackEase.Linear, _ => { });
+                var timer = backend.Animate(duration, request.UnscaledTime, FeedbackEase.Linear, _ => { });
                 p.Bind(() => { timer.Stop(); effect.Stop(); }, () => { timer.Complete(); effect.Complete(); });
                 EndLimit(p, effect, timer).Forget(); return p.Handle;
             }
@@ -173,7 +234,8 @@ namespace Dreamy.Feedback
             {
                 while (p.Status == FeedbackStatus.Running && effect.IsRunning && timer.IsRunning) await UniTask.Yield();
                 if (p.Status != FeedbackStatus.Running) return;
-                if (effect.Status == FeedbackStatus.Stopped || effect.Status == FeedbackStatus.Faulted) { p.Stop(); return; }
+                if (effect.Status == FeedbackStatus.Faulted) { p.Fail(); return; }
+                if (effect.Status == FeedbackStatus.Stopped) { p.Stop(); return; }
                 effect.Complete(); timer.Stop(); p.Finish();
             }
         }

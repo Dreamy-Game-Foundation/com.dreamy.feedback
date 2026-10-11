@@ -2,15 +2,19 @@ using System;
 using UnityEngine;
 namespace Dreamy.Feedback
 {
-    public sealed class CameraShakeService : ICameraShakeService, IDisposable
+    public sealed class CameraShakeService : IFeedbackAssetLookup, ICameraShakeService, IDisposable
     {
+        private CameraShakeDatabase assetDatabase;
+        public void SetDatabase(CameraShakeDatabase value) { if (value) value.Rebuild(); assetDatabase = value; }
+        public FeedbackAsset FindAsset(string id) => assetDatabase && assetDatabase.TryGetAsset(id, out var asset) ? asset : null;
+
         private CameraShakeDatabase database;
         private Transform target;
         private IFeedbackAnimationBackend backend;
         private FeedbackHandle active;
         public void Initialize(CameraShakeDatabase database, Camera camera, IFeedbackAnimationBackend backend = null, Transform offsetRoot = null)
-        { Stop(); this.database = database; target = offsetRoot ? offsetRoot : camera ? camera.transform : null; this.backend = backend ?? new UnityFeedbackAnimationBackend(); }
-        public FeedbackHandle Shake(string id) => database && database.TryGet(id, out var preset) ? Shake(preset.Options) : default;
+        { Stop(); this.database = database; SetDatabase(database); target = offsetRoot ? offsetRoot : camera ? camera.transform : null; this.backend = backend ?? new UnityFeedbackAnimationBackend(); }
+        public FeedbackHandle Shake(string id) => FindAsset(id) is CameraShakeFeedbackAsset asset ? Shake(asset.Settings) : database && database.TryGet(id, out var preset) ? Shake(preset.Options) : default;
         public FeedbackHandle Shake(CameraShakeOptions options)
         {
             if (!target) return default;

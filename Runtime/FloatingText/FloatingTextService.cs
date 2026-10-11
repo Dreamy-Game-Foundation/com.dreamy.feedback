@@ -5,15 +5,20 @@ using Cysharp.Threading.Tasks;
 
 namespace Dreamy.Feedback
 {
-    public sealed class FloatingTextService : IFloatingTextService, IDisposable
+    public sealed class FloatingTextService : IFeedbackAssetLookup, IFloatingTextService, IFloatingTextPresetService, IDisposable
     {
+        private FloatingTextDatabase assetDatabase;
+        public void SetDatabase(FloatingTextDatabase value) { if (value) value.Rebuild(); assetDatabase = value; }
+        public FeedbackAsset FindAsset(string id) => assetDatabase && assetDatabase.TryGetAsset(id, out var asset) ? asset : null;
+
         private const string DefaultStyleId = "default";
-        private readonly Dictionary<FloatingTextInstance, FloatingTextEntry> entryByInstance = new Dictionary<FloatingTextInstance, FloatingTextEntry>();
-        private readonly Dictionary<FloatingTextEntry, Stack<FloatingTextInstance>> pools = new Dictionary<FloatingTextEntry, Stack<FloatingTextInstance>>();
+        private readonly Dictionary<FloatingTextInstance, FloatingTextInstance> entryByInstance = new Dictionary<FloatingTextInstance, FloatingTextInstance>();
+        private readonly Dictionary<FloatingTextInstance, Stack<FloatingTextInstance>> pools = new Dictionary<FloatingTextInstance, Stack<FloatingTextInstance>>();
         private readonly Dictionary<FloatingTextInstance, long> active = new Dictionary<FloatingTextInstance, long>();
         private readonly Dictionary<FloatingTextInstance, FeedbackPlayback> playback = new Dictionary<FloatingTextInstance, FeedbackPlayback>();
         private IFeedbackAnimationBackend backend = new UnityFeedbackAnimationBackend();
         public int MaximumActiveTexts { get; set; } = 64;
+        private readonly HashSet<FloatingTextInstance> prewarmed = new HashSet<FloatingTextInstance>();
         private long generation;
         private Camera worldCamera;
         private FloatingTextDatabase database;
@@ -29,7 +34,7 @@ namespace Dreamy.Feedback
             Clear();
             this.backend = backend ?? new UnityFeedbackAnimationBackend();
             this.worldCamera = worldCamera;
-            this.database = database;
+            this.database = database; SetDatabase(database);
             this.root = root;
             Prewarm();
         }
@@ -49,6 +54,12 @@ namespace Dreamy.Feedback
             }
 
             var styleId = string.IsNullOrWhiteSpace(options.StyleId) ? DefaultStyleId : options.StyleId;
+            if (FindAsset(styleId) is FloatingTextFeedbackAsset preset)
+            {
+                var direct = preset.Settings; direct.Color = options.Color ?? direct.Color; direct.Duration = options.Duration ?? direct.Duration;
+                direct.MoveOffset = options.MoveOffset ?? direct.MoveOffset; direct.StartScale = options.StartScale ?? direct.StartScale; direct.EndScale = options.EndScale ?? direct.EndScale;
+                return Play(direct, text, worldPosition, options.UnscaledTime);
+            }
             if (!database.TryGet(styleId, out var entry) || entry == null)
             {
                 Debug.LogWarning($"Floating text style '{styleId}' was not found.");
@@ -61,18 +72,25 @@ namespace Dreamy.Feedback
                 return FeedbackHandle.Invalid;
             }
 
-            var instance = Get(entry);
-            var color = options.Color ?? entry.Color;
-            var duration = options.Duration ?? entry.Duration;
-            if (float.IsNaN(duration) || float.IsInfinity(duration) || duration < 0) return default;
-            var moveOffset = options.MoveOffset ?? entry.MoveOffset;
-            var startScale = options.StartScale ?? entry.StartScale;
-            var endScale = options.EndScale ?? entry.EndScale;
+            var settings = new FloatingTextFeedbackSettings { Prefab = entry.Prefab.gameObject, Color = options.Color ?? entry.Color,
+                Duration = options.Duration ?? entry.Duration, MoveOffset = options.MoveOffset ?? entry.MoveOffset,
+                StartScale = options.StartScale ?? entry.StartScale, EndScale = options.EndScale ?? entry.EndScale };
+            return Play(settings, text, worldPosition, options.UnscaledTime);
+        }
+
+        public FeedbackHandle Play(FloatingTextFeedbackSettings settings, string text, Vector3 worldPosition, bool unscaledTime)
+        {
+            if (!root || active.Count >= MaximumActiveTexts || !settings.Prefab || !Finite(settings.Duration) || settings.Duration < 0 ||
+                !Finite(settings.StartScale) || !Finite(settings.EndScale)) return default;
+            var prefab = settings.Prefab.GetComponent<FloatingTextInstance>();
+            if (!prefab) { Debug.LogWarning("Floating text prefab requires FloatingTextInstance on its root."); return default; }
+            PrewarmPrefab(prefab, settings.PrewarmCount);
+            var instance = Get(prefab);
             long lease = ++generation; active[instance] = lease;
 
             if (worldCamera) worldPosition = FeedbackUtility.WorldToUIPosition(worldPosition, worldCamera, root);
             var state = new FeedbackPlayback(); playback[instance] = state;
-            var animation = instance.Play(text, worldPosition, color, duration, moveOffset, startScale, endScale, options.UnscaledTime, backend);
+            var animation = instance.Play(text, worldPosition, settings.Color, settings.Duration, settings.MoveOffset, settings.StartScale, settings.EndScale, unscaledTime, backend);
             state.Bind(() => { animation.Stop(); Release(instance); }, () => { animation.Complete(); Release(instance); });
             Observe(instance, lease, state, animation).Forget();
             return state.Handle;
@@ -83,6 +101,7 @@ namespace Dreamy.Feedback
             var status = await animation.Completion.AsUniTask();
             if (state.Status != FeedbackStatus.Running) return;
             if (status == FeedbackStatus.Completed) { Release(instance); state.Finish(); }
+            else if (status == FeedbackStatus.Faulted) state.Fail();
             else state.Stop();
         }
 
@@ -101,11 +120,16 @@ namespace Dreamy.Feedback
                     continue;
                 }
 
-                for (var j = 0; j < Mathf.Clamp(entry.PrewarmCount,0,64); j++)
-                {
-                    var instance = Create(entry); active[instance] = ++generation; Release(instance);
-                }
+                PrewarmPrefab(entry.Prefab, entry.PrewarmCount);
             }
+        }
+
+        private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+        private void PrewarmPrefab(FloatingTextInstance prefab, int count)
+        {
+            if (!prewarmed.Add(prefab)) return;
+            for (int i = 0; i < Mathf.Clamp(count, 0, 64); i++)
+            { var instance = Create(prefab); active[instance] = ++generation; Release(instance); }
         }
 
         public void Clear()
@@ -117,13 +141,13 @@ namespace Dreamy.Feedback
                 if (!instance) continue;
                 instance.gameObject.SetActive(false); UnityEngine.Object.Destroy(instance.gameObject);
             }
-            entryByInstance.Clear();
+            entryByInstance.Clear(); prewarmed.Clear();
         }
         public void Dispose() { Clear(); database = null; root = null; worldCamera = null; }
 
-        private FloatingTextInstance Get(FloatingTextEntry entry)
+        private FloatingTextInstance Get(FloatingTextInstance prefab)
         {
-            if (pools.TryGetValue(entry, out var pool))
+            if (pools.TryGetValue(prefab, out var pool))
             {
                 while (pool.Count > 0)
                 {
@@ -135,13 +159,13 @@ namespace Dreamy.Feedback
                 }
             }
 
-            return Create(entry);
+            return Create(prefab);
         }
 
-        private FloatingTextInstance Create(FloatingTextEntry entry)
+        private FloatingTextInstance Create(FloatingTextInstance prefab)
         {
-            var instance = UnityEngine.Object.Instantiate(entry.Prefab, root);
-            entryByInstance[instance] = entry;
+            var instance = UnityEngine.Object.Instantiate(prefab, root);
+            entryByInstance[instance] = prefab;
             return instance;
         }
 
@@ -152,16 +176,16 @@ namespace Dreamy.Feedback
             if (playback.TryGetValue(instance, out var state)) { playback.Remove(instance); state.Finish(); }
             instance.gameObject.SetActive(false);
             instance.transform.SetParent(root, false);
-            if (!entryByInstance.TryGetValue(instance, out var entry))
+            if (!entryByInstance.TryGetValue(instance, out var prefab))
             {
                 UnityEngine.Object.Destroy(instance.gameObject);
                 return;
             }
 
-            if (!pools.TryGetValue(entry, out var pool))
+            if (!pools.TryGetValue(prefab, out var pool))
             {
                 pool = new Stack<FloatingTextInstance>();
-                pools[entry] = pool;
+                pools[prefab] = pool;
             }
 
             pool.Push(instance);

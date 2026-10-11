@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Dreamy.Feedback
 {
     [CreateAssetMenu(menuName = "Dreamy/Feedback/Camera Shake Database", fileName = "CameraShakeDatabase")]
-    public sealed class CameraShakeDatabase : ScriptableObject
+    public sealed class CameraShakeDatabase : FeedbackAssetDatabase<CameraShakeFeedbackAsset>
     {
         [SerializeField] private List<CameraShakePreset> presets = new List<CameraShakePreset>();
 

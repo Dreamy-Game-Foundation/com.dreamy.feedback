@@ -13,7 +13,15 @@ namespace Dreamy.Feedback.Editor
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-            EditorGUILayout.HelpBox(Hint, MessageType.Info);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("assets"), true);
+            var legacy = serializedObject.FindProperty(ListName);
+            if (legacy.arraySize == 0)
+            {
+                serializedObject.ApplyModifiedProperties();
+                try { target.GetType().GetMethod("Rebuild").Invoke(target, null); } catch (System.Exception e) { EditorGUILayout.HelpBox(e.InnerException?.Message ?? e.Message, MessageType.Error); }
+                return;
+            }
+            EditorGUILayout.HelpBox("Legacy inline entries (compatibility). New entries use the SO list above.", MessageType.Info);
             var entries = serializedObject.FindProperty(ListName);
             for (int i = 0; i < entries.arraySize; i++)
             {

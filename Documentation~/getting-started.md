@@ -1,5 +1,9 @@
 # Getting started
 
+Prefer [effect ScriptableObjects](effect-assets.md) for new content: drag assets into a
+Definition or play an effect directly. Seven shared starter SO reuse the existing four icons.
+Inline nodes and ID databases remain supported for existing consumers.
+
 Start with the [ready-to-use sample guide](../Samples~/BasicFeedbackSample/README.md): GameFeedbackRig, FeedbackPlayer, four reward presets and game HUD setup. No generator or Economy sample is required.
 
 1. Install Dreamy Feedback and its UPM dependencies. Core is optional for base playback.

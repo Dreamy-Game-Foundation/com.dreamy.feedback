@@ -1,3 +1,37 @@
+# Effect SO completion — 2026-10-10
+
+## Authoring simplification — superseding update
+
+- Shared FeedbackAsset base retains stable ID and snapshot logic. Seven effect SO have no base-preset or override fields. New Definitions use Sequence/Parallel/Staggered plus a list of asset/delay/required steps; hidden legacy graphs remain readable for explicit migration.
+- Per-type databases store SO references and index IDs. IconFlyPlayArgs supplies runtime anchors/icon/count/owner/cancellation; Count is independent from Amount. Reference and ID playback remain available; facade ID lookup is Definition-only.
+- Portable sample preserves four icons and seven shared effects, thirteen top-level Definitions and one necessary nested group. Runtime visual differences are serialized on the demo component, not inside SOs. GUIDs are preserved during folder moves.
+- Final consumer EditMode **26/26**, base PlayMode **35/35**, DOTween PlayMode **38/38**, all without skips. Tests include timing, pending-delay Complete, ID isolation, duplicate rejection, runtime icon defaults/zero, destroyed anchors, migration preview/idempotence and absence of SO override/runtime-position fields.
+- Windows development build and graphical batchmode player smoke pass, **exit 0**. Runtime/Contracts boundary, asmdef/package-check, source diff check and package GUID uniqueness pass. No serialized override/base-preset fields remain in portable SO files. Sandbox compilation has no C# errors; the existing FloatingTextInstance CS0108 warning remains.
+- Active sandbox user edits are preserved in dirty `Assets/FeedbackWorkingCopies/FeedbackDemo Authoring Working Copy.unity` with initial/final snapshots. The clean demo fixture was updated separately. The sandbox's custom text/VFX assets are retained.
+
+Evidence: `.omo/evidence/feedback-simplification/summary.json`, `editmode-final.xml`, `base-release-playmode.xml`, `dotween-release-playmode.xml`, `build.log`, `player-smoke.log`, `player-exit.json`, `static-checks.json`, and scene snapshots. Failed initial fixture runs are retained but excluded from passing counts.
+
+The first sandbox migration produced an empty ComboPopup list. Its original tracked data was restored, conversion rerun, and migration now detaches the converted step list and rejects empty output before saving. Both preview and migration regression tests pass. Legacy layouts with standalone/parallel/trailing Delay require an explicit redesign and are reported; unsupported assets are not silently flattened.
+
+Physical mobile haptics/builds/performance and Foundation integration were not rerun. Package version remains 0.3.0 with Unreleased changes; no commit, tag, push or registry verification update is claimed. Historical completion evidence below describes the prior schema.
+
+This section supersedes the historical counts below. Validated local working tree, Unity 6000.4.12f1 Windows; package remains 0.3.0 with Unreleased changes. No published tag or compatibility-registry commit is claimed.
+
+- Exactly seven shared effect SO and the existing four icons. Thirteen composite definitions reuse them with explicit overrides; no expanded art set. Direct SO VFX/text playback requires no ID database.
+- Variant/step/request precedence, isolated snapshots, serialization, scoped migration preview, duplicate/cycle validation, multi-observer UniTask waits and pool leases are covered by tests.
+- Clean base consumer: **24/24 EditMode**, **32/32 PlayMode**. Clean consumer with optional DOTween sample and provider assigned: **35/35 PlayMode**. Zero tests/skips are not counted as passes.
+- Final Windows development build and error-sensitive graphical player smoke pass, player exit **0**. Smoke uses batchmode with D3D11 enabled; the first hidden interactive launch paused without focus and was stopped, so it is excluded from passing evidence.
+- Demo tests use real EventSystem raycasts and cover fourteen channels, four rewards, observable VFX/text/icon output, Play All, Stop/Complete and reopen without duplicate listeners. Sandbox channel/reward checks also complete successfully.
+- Fixed invalid VFX/text prefab file references and sample text clipping/depth defaults. Portrait and landscape captures show readable labels in the Built-in consumer.
+- Harness asmdef and package-check pass. Runtime/Contracts contain no UnityEditor references or Task.Run. Editor compilation has no C# errors; an existing CS0108 warning in FloatingTextInstance remains.
+- Prior unsaved sandbox edits are preserved in the active, dirty `Assets/FeedbackWorkingCopies/FeedbackDemo Working Copy.unity`; the original demo fixture receives only the serialized entry update. User fonts/art remain in the sandbox.
+
+Evidence: sandbox `.omo/evidence/feedback-completion/`, notably `base-editmode-final.xml`, `base-playmode-complete.xml`, `dotween-playmode-complete.xml`, `base-build-complete.log`, `player-smoke-batch-complete.log`, `player-exit-batch-complete.json`, `sandbox-runtime-final.json`, `editor-restoration.json`, `portrait.png`, `landscape.png` and `summary.json`.
+
+Physical Android/iOS vibration, mobile builds and device performance/thermal budgets are untested. Editor/desktop haptics report unsupported; generic mobile vibration cannot distinguish native intensity patterns. Foundation integration was not changed or rerun in this completion pass. Minimum Unity 6000.0 is not validated by the observed 6000.4.12f1 run.
+
+---
+
 # Editor authoring and common presets — 2026-10-10
 
 - Definition Inspector adds type-aware node defaults, filtered runtime-only fields, Up/Down ordering and optional VFX/text ID lookup scoped to a selected rig. Lookup does not serialize a Host reference into the asset.

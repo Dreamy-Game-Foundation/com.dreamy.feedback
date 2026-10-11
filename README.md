@@ -1,13 +1,17 @@
 # Dreamy Feedback
 
+Authoring bằng SO: mỗi loại effect có asset riêng; Definition chọn Sequence/Parallel/Staggered và chứa list asset.
+SO không có inheritance hoặc override; dữ liệu runtime truyền qua code/component. Sample giữ 4 icon hiện có và
+chỉ thêm 7 SO dùng chung. Xem [hướng dẫn effect assets](Documentation~/effect-assets.md).
+
 Feedback cho Unity: VFX, haptic, floating text, icon bay về HUD, UI punch, camera shake và screen flash. Một `FeedbackDefinition` có thể ghép các effect bằng Sequence, Parallel và Delay. Package chỉ trình bày kết quả; việc cộng tiền, năng lượng hoặc phần thưởng thuộc gameplay.
 
 ## Dùng ngay trong game
 
 1. Cài package và dependency trong `package.json`. DOTween và Dreamy Core là tùy chọn.
 2. Import sample **Basic Feedback** trong Package Manager và import **TMP Essential Resources** nếu project chưa có.
-3. Kéo `Generated/GameFeedbackRig.prefab` vào scene. Prefab đã có host, pool roots, Canvas effect và database mặc định; không chứa camera, đèn, puzzle tiles hay UI demo.
-4. Thêm **Feedback Player** lên một GameObject trong UI. Gán Host và Definition, rồi kéo anchor bắt đầu vào Icon Source và icon HUD vào Target.
+3. Kéo `Generated/Rigs/GameFeedbackRig.prefab` vào scene. Prefab đã có host, pool roots, Canvas effect và database mặc định; không chứa camera, đèn, puzzle tiles hay UI demo.
+4. Thêm **Feedback Player** lên một GameObject trong UI. Gán Host và Asset (effect đơn hoặc Definition), rồi kéo anchor bắt đầu vào Icon Source và icon HUD vào Target.
 5. Gán `FeedbackPlayer.Play()` vào `Button.onClick`. Có thể chọn `CoinReward`, `StarReward`, `EnergyReward`, `GemReward` hoặc definition riêng.
 
 Không cần chạy builder. `FeedbackDemo.unity` dùng để xem trước các preset và so sánh kiểu animation. `FeedbackRig.prefab` chứa camera/anchor của preview; dùng **GameFeedbackRig** khi tích hợp vào game.
@@ -79,4 +83,4 @@ Chi tiết: [semantics và authoring](Documentation~/getting-started.md), [migra
 
 Adapter DOTween được đóng gói tại `Samples~/DOTweenFeedbackSample`, không cần repo/package riêng. Xem [hướng dẫn cài, gán provider và chỉnh icon fly](Samples~/DOTweenFeedbackSample/README.md).
 
-Tạo data nhanh: **Assets → Create → Dreamy → Feedback → Common Presets** hoặc dùng 7 asset trong `Basic Feedback/Generated/CommonPresets`. Definition có menu Add effect và lookup ID theo rig; databases có entry theo ID và validation inline. [Preset, setup tối thiểu và ví dụ gọi](Samples~/BasicFeedbackSample/README.md#tạo-và-chỉnh-data-nhanh).
+Create a Definition, select Sequence/Parallel/Staggered, then drag effect SO into its list. The Inspector has no lookup rig or SO overrides. For ID playback, assign separate per-type databases containing SO references. See [effect assets and runtime values](Documentation~/effect-assets.md).
