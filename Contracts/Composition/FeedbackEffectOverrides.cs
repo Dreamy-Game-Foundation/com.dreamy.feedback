@@ -67,10 +67,13 @@ namespace Dreamy.Feedback
         }
     }
 
+    public enum VfxSpace { World, UI }
+
     [Serializable]
     public struct VfxFeedbackSettings
     {
         public GameObject Prefab;
+        public VfxSpace Space;
         [Min(.01f)] public float MaximumDuration;
         [Min(0)] public int PrewarmCount;
         [Min(0)] public float Scale;

@@ -18,6 +18,7 @@ namespace Dreamy.Feedback
         [SerializeField] private Sprite icon;
         [SerializeField] private long amount = 1;
         public FeedbackHandle LastHandle { get; private set; }
+        public void BindHost(FeedbackHost value) => host = value;
 
         // UnityEvent entry point: wire a Button.onClick to this method.
         public void Play() => PlayAt(transform.position);

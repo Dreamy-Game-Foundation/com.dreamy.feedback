@@ -22,12 +22,14 @@ namespace Dreamy.Feedback
         private long generation;
         private VfxDatabase database;
         private Transform root;
+        private RectTransform uiRoot;
 
-        public void Initialize(VfxDatabase database, Transform root)
+        public void Initialize(VfxDatabase database, Transform root, RectTransform uiRoot = null)
         {
             Clear();
             this.database = database; SetDatabase(database);
             this.root = root;
+            this.uiRoot = uiRoot;
             Prewarm();
         }
 
@@ -66,20 +68,37 @@ namespace Dreamy.Feedback
             if (!root || !settings.Prefab || active.Count >= MaximumActiveVfx ||
                 !Finite(settings.MaximumDuration) || settings.MaximumDuration <= 0 || !Finite(settings.Scale) || settings.Scale < 0) return default;
             if (settings.Scale == 0) return FeedbackHandle.Completed;
+            if (settings.Space == VfxSpace.UI)
+            {
+                var parent = options.Parent ? options.Parent : uiRoot;
+                if (!(parent is RectTransform) || !parent.GetComponentInParent<Canvas>() || !settings.Prefab.GetComponent<RectTransform>())
+                {
+                    Debug.LogWarning("UI VFX requires a RectTransform prefab and a parent under a Canvas.");
+                    return default;
+                }
+                options.Parent = parent;
+                if (options.UiAnchor)
+                {
+                    if (!FeedbackUtility.TryUiPosition(options.UiAnchor, parent, out options.Position)) return default;
+                    options.UseLocalPosition = false;
+                }
+            }
             PrewarmPrefab(settings.Prefab, settings.PrewarmCount);
             options.Scale = (options.Scale == 0 ? 1 : options.Scale) * settings.Scale;
-            return PlayPrefab(settings.Prefab, options, VfxDespawnMode.FixedLifetime, settings.MaximumDuration);
+            return PlayPrefab(settings.Prefab, options, VfxDespawnMode.FixedLifetime, settings.MaximumDuration, settings.Space == VfxSpace.UI);
         }
 
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
-        private FeedbackHandle PlayPrefab(GameObject prefab, VfxPlayOptions options, VfxDespawnMode mode, float lifetime)
+        private FeedbackHandle PlayPrefab(GameObject prefab, VfxPlayOptions options, VfxDespawnMode mode, float lifetime, bool uiSpace = false)
         {
             if (!root || !Finite(options.Scale)) return default;
             var instance = Get(prefab);
             var parent = options.Parent ? options.Parent : root;
             instance.transform.SetParent(parent, false);
             instance.transform.localScale = prefab.transform.localScale * (options.Scale == 0 ? 1 : options.Scale);
-            instance.transform.rotation = options.Rotation == default ? Quaternion.identity : options.Rotation;
+            var rotation = options.Rotation == default ? Quaternion.identity : options.Rotation;
+            if (uiSpace) instance.transform.localRotation = rotation;
+            else instance.transform.rotation = rotation;
             if (options.UseLocalPosition)
             {
                 instance.transform.localPosition = options.Position;
@@ -95,6 +114,7 @@ namespace Dreamy.Feedback
             instance.Initialize(Release, () => state.Stop());
             state.Bind(() => { if (active.TryGetValue(instance, out long current) && current == lease) instance.Stop(); },
                 () => { if (active.TryGetValue(instance, out long current) && current == lease) instance.Stop(); });
+            instance.ConfigurePlayback(options, lifetime);
             instance.Play();
             if (options.FollowTarget)
             {
@@ -144,7 +164,7 @@ namespace Dreamy.Feedback
             }
             prefabByInstance.Clear(); prewarmed.Clear();
         }
-        public void Dispose() { Clear(); database = null; root = null; }
+        public void Dispose() { Clear(); database = null; root = null; uiRoot = null; }
 
         private VfxInstance Get(GameObject prefab)
         {

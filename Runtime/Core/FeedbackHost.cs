@@ -14,6 +14,7 @@ namespace Dreamy.Feedback
         [SerializeField] private HapticDatabase hapticDatabase;
         [SerializeField] private DefinitionDatabase definitionDatabase;
         [SerializeField] private Camera worldCamera;
+        [SerializeField] private bool useMainCamera = true;
         [SerializeField] private FeedbackAnimationProvider animationProvider;
         [SerializeField] private bool haptics = true;
         [SerializeField] private bool iconFly = true;
@@ -27,6 +28,7 @@ namespace Dreamy.Feedback
         public UiFeedbackService Ui { get; private set; }
         public FeedbackService Feedback { get; private set; }
         public bool IsInitialized => Feedback != null;
+        public Camera WorldCamera => worldCamera;
         private void OnEnable() { if (root) Initialize(); }
         /// <summary>Bind a game camera. Changing cameras stops current playback and rebuilds the services.</summary>
         public void Initialize(Camera camera)
@@ -38,10 +40,11 @@ namespace Dreamy.Feedback
         {
             if (IsInitialized) return;
             if (!root) throw new InvalidOperationException("FeedbackHost needs an explicit FeedbackRoot.");
+            if (!worldCamera && useMainCamera) worldCamera = Camera.main;
             var backend = animationProvider ? animationProvider.CreateBackend() : new UnityFeedbackAnimationBackend();
             try
             {
-                Vfx = new VfxService(); Vfx.Initialize(vfxDatabase,root.WorldVfxRoot);
+                Vfx = new VfxService(); Vfx.Initialize(vfxDatabase,root.WorldVfxRoot,root.UiVfxRoot);
                 if (haptics) Haptic = new HapticService();
                 FloatingText = new FloatingTextService(); FloatingText.Initialize(floatingTextDatabase,root.FloatingTextRoot,worldCamera,backend);
                 if (iconFly) { IconFly = new IconFlyService(); IconFly.Initialize(root.IconFlyRoot,animationProvider ? animationProvider.CreateIconAnimator(backend) : new UnityIconFlyAnimator(backend)); }

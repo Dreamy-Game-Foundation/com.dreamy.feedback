@@ -2,7 +2,14 @@
 
 ## [Unreleased]
 
-- Simplify SO authoring: shared ID base, Definition mode/list with per-step delay, no preset inheritance or SO overrides; retain hidden legacy graph reader for migration.
+## [0.4.0] - 2026-10-12
+
+- Update sample regressions to distinguish icon instances from the persistent UI VFX container; isolate fallback camera fixtures from other loaded scenes.
+
+- Add Canvas-native pooled UI burst VFX, explicit World/UI preset routing, pause-aware playback and a non-overwriting UI starter generator.
+- Resolve MainCamera at Host initialization when enabled and show missing-camera guidance in the Host Inspector; overlay UI remains independent of camera shake.
+
+- Breaking: simplify SO authoring: shared ID base, Definition mode/list with per-step delay, no preset inheritance or SO overrides; retain hidden legacy graph reader for migration.
 - Add per-type SO-reference databases, primitive ID lookup, direct VFX overloads, typed IconFly runtime args and runtime-only component/step bindings.
 - Organize sample Effects/Definitions/Databases/Rigs/Scenes without changing asset GUIDs; keep seven effect SO and four icons, plus one necessary nested Definition.
 - Add seven per-effect ScriptableObject types, direct-asset requests, immutable playback snapshots, runtime request customization and optional libraries.

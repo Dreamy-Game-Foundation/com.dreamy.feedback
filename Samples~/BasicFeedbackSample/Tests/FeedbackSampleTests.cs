@@ -73,7 +73,7 @@ namespace Dreamy.Feedback.Samples.Tests
             controls.PlayAll(); yield return null;
             controls.StopAll(); yield return null;
             var root = host.GetComponent<FeedbackRoot>();
-            Assert.That(root.WorldVfxRoot.childCount, Is.Zero); Assert.That(root.FloatingTextRoot.childCount, Is.Zero); Assert.That(root.IconFlyRoot.childCount, Is.Zero);
+            Assert.That(root.WorldVfxRoot.childCount, Is.Zero); Assert.That(root.FloatingTextRoot.childCount, Is.Zero); Assert.That(root.IconFlyRoot.GetComponentsInChildren<IconFlyInstance>(true), Is.Empty); Assert.That(root.UiVfxRoot.childCount, Is.Zero);
             foreach (var text in Object.FindObjectsByType<TMP_Text>(FindObjectsSortMode.None)) { Assert.That(text.font, Is.Not.Null, text.name);  }
             Assert.That(AssetDatabase.LoadAssetAtPath<Material>(Path.GetDirectoryName(Path.GetDirectoryName(AssetDatabase.GUIDToAssetPath(guid))) + "/RewardParticles.mat").shader.name, Is.EqualTo("Dreamy/Feedback/SampleParticles"));
             Assert.That(host.transform.Find("PuzzleBoard"), Is.Null);
@@ -125,7 +125,7 @@ namespace Dreamy.Feedback.Samples.Tests
                 data.FindProperty("target").objectReferenceValue=target.transform; data.ApplyModifiedPropertiesWithoutUndo();
                 player.Play(); yield return null;
                 Assert.That(player.LastHandle.IsRunning,Is.True);
-                Assert.That(host.GetComponent<FeedbackRoot>().IconFlyRoot.childCount,Is.EqualTo(4));
+                Assert.That(host.GetComponent<FeedbackRoot>().IconFlyRoot.GetComponentsInChildren<IconFlyInstance>(),Has.Length.EqualTo(4));
                 owner.SetActive(false); yield return null; yield return null;
                 Assert.That(player.LastHandle.Status,Is.EqualTo(FeedbackStatus.Stopped));
             }

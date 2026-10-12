@@ -1,3 +1,26 @@
+# Sample release 0.4.0 — 2026-10-12
+
+- Unity 6000.4.12f1 Linux: EditMode 26/26 passed; combined Feedback, DOTween, Template and pooling PlayMode 63/63 passed, no skips.
+- Exact portable Basic Feedback sample from Samples~: 5/5 PlayMode passed with shipped prefabs, without sandbox-only DOTween/URP attachments.
+- Settings/Shop managed harness and Core sample compile passed. Runtime/Contracts Editor boundary, asmdef parsing, prefab fileID uniqueness and metadata checks passed.
+- Corrected sample assertions for the persistent UI VFX root and isolated camera fixtures from scenes loaded by other tests. Updated the Template fixture's moved prefab path.
+- MCP PlayMode initialization timed out; PlayMode counts are from isolated batchmode XML. MCP EditMode completed successfully.
+- Release version 0.4.0 replaces the historical Unreleased state described below. Mobile device and player builds were not rerun for this release.
+
+Evidence: sandbox `.omo/evidence/samples-release/`.
+
+# UI VFX and camera binding verification — 2026-10-12
+
+Unity 6000.4.12f1 Linux, working tree; no release tag.
+
+- Package PlayMode: **33/33 passed** in the temporary validation project, including Canvas burst pause/scaled-time, owner disable, image reuse and MainCamera/explicit camera binding.
+- Project regression: **1/1 passed** for camera loading after feedback bootstrap, refreshed Core registrations, camera movement and restoration.
+- Actual BootstrapScene → MainScene smoke: Host bound Main Camera; the imported star burst created eight UI Images under FeedbackEffects; camera shake moved the camera across frames with the installed DOTween backend and Stop restored its position.
+- Both imported UI presets resolved successfully in Unity with Canvas routing and valid prefab/component references. Assets and meta GUIDs are mirrored in the portable sample.
+- MCP Test Runner failed to initialize twice; successful test counts above come from Unity batchmode XML, not those MCP jobs. No mobile device or player build validation was performed for this change.
+
+Evidence: sandbox `.omo/evidence/feedback-ui-camera/`.
+
 # Effect SO completion — 2026-10-10
 
 ## Authoring simplification — superseding update

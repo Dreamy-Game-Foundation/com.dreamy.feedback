@@ -160,6 +160,93 @@ namespace Dreamy.Feedback.Tests
             var ui = Asset<UiPunchFeedbackAsset>(); ui.Configure("same", UiPunchOptions.Default);
             var uiDatabase = Asset<UiPunchDatabase>(); uiDatabase.Configure(new[] {ui}); Assert.That(uiDatabase.TryGetAsset("same", out _), Is.True);
         }
+        [UnityTest] public IEnumerator UiVfxRunsOnOverlayWhilePausedAndReusesImages()
+        {
+            var pool = GO("Pool");
+            var canvas = GO("Canvas", typeof(RectTransform), typeof(Canvas));
+            canvas.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+            var uiRoot = GO("UiVfxRoot", typeof(RectTransform)).GetComponent<RectTransform>();
+            uiRoot.SetParent(canvas.transform, false);
+            uiRoot.localRotation = Quaternion.Euler(0, 0, 15);
+            var prefab = GO("UiBurst", typeof(RectTransform), typeof(UiBurstVfxInstance)); prefab.SetActive(false);
+            var asset = Asset<VfxFeedbackAsset>();
+            asset.Configure("ui", new VfxFeedbackSettings { Prefab = prefab, Space = VfxSpace.UI, MaximumDuration = .15f, Scale = 1, PrewarmCount = 1 });
+            var vfx = new VfxService(); vfx.Initialize(null, pool.transform, uiRoot); services.Add(vfx);
+            var facade = new FeedbackService(new FeedbackServices { Vfx = vfx }, new UnityFeedbackAnimationBackend()); services.Add(facade);
+            Time.timeScale = 0;
+            var position = uiRoot.position + new Vector3(30, 40, 0);
+            var handle = facade.Play(FeedbackRequestBuilder.For(asset).At(position).Build());
+            var instance = uiRoot.GetComponentInChildren<UiBurstVfxInstance>();
+            Assert.That(instance, Is.Not.Null);
+            Assert.That(Vector3.Distance(instance.transform.position, position), Is.LessThan(.001f));
+            Assert.That(instance.transform.localRotation, Is.EqualTo(Quaternion.identity), "UI pieces must stay in their Canvas plane.");
+            var images = instance.GetComponentsInChildren<UnityEngine.UI.Image>();
+            Assert.That(images.Length, Is.EqualTo(12));
+            foreach (var image in images) Assert.That(image.raycastTarget, Is.False);
+            yield return new WaitForSecondsRealtime(.06f);
+            Assert.That(images[0].rectTransform.anchoredPosition.sqrMagnitude, Is.GreaterThan(1));
+            yield return new WaitForSecondsRealtime(.2f);
+            Assert.That(handle.Status, Is.EqualTo(FeedbackStatus.Completed));
+            var again = facade.Play(FeedbackRequestBuilder.For(asset).At(position).Build());
+            Assert.That(uiRoot.GetComponentInChildren<UiBurstVfxInstance>(), Is.SameAs(instance));
+            Assert.That(instance.GetComponentsInChildren<UnityEngine.UI.Image>().Length, Is.EqualTo(12));
+            handle.Stop(); Assert.That(again.IsRunning, Is.True);
+            again.Stop(); Assert.That(instance.gameObject.activeSelf, Is.False);
+        }
+
+        [UnityTest] public IEnumerator UiVfxRespectsScaledTimeAndDisabledOwner()
+        {
+            var canvas = GO("Canvas", typeof(RectTransform), typeof(Canvas));
+            var pool = GO("Pool"); var owner = GO("Owner");
+            var prefab = GO("UI", typeof(RectTransform), typeof(UiBurstVfxInstance)); prefab.SetActive(false);
+            var vfx = new VfxService(); vfx.Initialize(null, pool.transform, canvas.GetComponent<RectTransform>()); services.Add(vfx);
+            var asset = Asset<VfxFeedbackAsset>(); asset.Configure("ui", new VfxFeedbackSettings { Prefab = prefab, Space = VfxSpace.UI, MaximumDuration = .1f, Scale = 1 });
+            var facade = new FeedbackService(new FeedbackServices { Vfx = vfx }, new UnityFeedbackAnimationBackend()); services.Add(facade);
+            Time.timeScale = 0;
+            var handle = facade.Play(FeedbackRequestBuilder.For(asset).From(owner).UseUnscaledTime(false).Build());
+            var instance = canvas.GetComponentInChildren<UiBurstVfxInstance>();
+            yield return new WaitForSecondsRealtime(.2f);
+            Assert.That(handle.IsRunning, Is.True);
+            Assert.That(instance.GetComponentInChildren<UnityEngine.UI.Image>().rectTransform.anchoredPosition, Is.EqualTo(Vector2.zero));
+            owner.SetActive(false); yield return null; yield return null;
+            Assert.That(handle.Status, Is.EqualTo(FeedbackStatus.Stopped));
+            Assert.That(instance.gameObject.activeSelf, Is.False);
+        }
+
+        [UnityTest] public IEnumerator AtUiPlacesVfxAndRewardTextAtAnchor()
+        {
+            var canvas = GO("Canvas", typeof(RectTransform), typeof(Canvas));
+            canvas.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+            var anchor = GO("RewardAnchor", typeof(RectTransform)).GetComponent<RectTransform>();
+            anchor.SetParent(canvas.transform, false);
+            anchor.anchoredPosition = new Vector2(120, -80);
+            var uiRoot = GO("UiVfxRoot", typeof(RectTransform)).GetComponent<RectTransform>();
+            uiRoot.SetParent(canvas.transform, false);
+            var textRoot = GO("TextRoot", typeof(RectTransform)).GetComponent<RectTransform>();
+            textRoot.SetParent(canvas.transform, false);
+            var burstPrefab = GO("Burst", typeof(RectTransform), typeof(UiBurstVfxInstance)); burstPrefab.SetActive(false);
+            var textPrefab = GO("Text", typeof(RectTransform), typeof(FloatingTextInstance)); textPrefab.SetActive(false);
+            var burstAsset = Asset<VfxFeedbackAsset>();
+            burstAsset.Configure("burst", new VfxFeedbackSettings { Prefab = burstPrefab, Space = VfxSpace.UI, MaximumDuration = 1, Scale = 1 });
+            var textAsset = Asset<FloatingTextFeedbackAsset>();
+            var textSettings = FloatingTextFeedbackSettings.Default;
+            textSettings.Prefab = textPrefab; textSettings.Duration = 1; textSettings.MoveOffset = Vector3.zero;
+            textAsset.Configure("reward", textSettings);
+            var vfx = new VfxService(); vfx.Initialize(null, GO("WorldPool").transform, uiRoot); services.Add(vfx);
+            var texts = new FloatingTextService(); texts.Initialize(null, textRoot); services.Add(texts);
+            var facade = new FeedbackService(new FeedbackServices { Vfx = vfx, FloatingText = texts }, new UnityFeedbackAnimationBackend()); services.Add(facade);
+            var burst = facade.Play(FeedbackRequestBuilder.For(burstAsset).AtUi(anchor).Build());
+            var reward = facade.Play(FeedbackRequestBuilder.For(textAsset).AtUi(anchor).WithText("+321").Build());
+            yield return null;
+            var expected = anchor.TransformPoint(anchor.rect.center);
+            var burstInstance = uiRoot.GetComponentInChildren<UiBurstVfxInstance>();
+            var textInstance = textRoot.GetComponentInChildren<FloatingTextInstance>();
+            Assert.That(burst.IsRunning && reward.IsRunning, Is.True);
+            Assert.That(Vector3.Distance(burstInstance.transform.position, expected), Is.LessThan(1));
+            Assert.That(Vector3.Distance(textInstance.transform.position, expected), Is.LessThan(1));
+            burst.Stop(); reward.Stop();
+        }
+
         private sealed class PendingUi : IUiFeedbackService
         {
             public readonly List<FeedbackPlayback> States = new List<FeedbackPlayback>();

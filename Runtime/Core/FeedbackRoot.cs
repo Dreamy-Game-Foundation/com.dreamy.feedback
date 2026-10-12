@@ -15,12 +15,28 @@ namespace Dreamy.Feedback
         [SerializeField] private Transform iconFlyRoot;
         [SerializeField] private Transform screenFeedbackRoot;
         [SerializeField] private Transform cameraRoot;
+        [SerializeField] private RectTransform uiVfxRoot;
 
         public Transform WorldVfxRoot => worldVfxRoot ? worldVfxRoot : (worldVfxRoot = EnsureChild(WorldVfxRootName));
         public Transform FloatingTextRoot => floatingTextRoot ? floatingTextRoot : (floatingTextRoot = EnsureChild(FloatingTextRootName));
         public Transform IconFlyRoot => iconFlyRoot ? iconFlyRoot : (iconFlyRoot = EnsureChild(IconFlyRootName));
         public Transform ScreenFeedbackRoot => screenFeedbackRoot ? screenFeedbackRoot : (screenFeedbackRoot = EnsureChild(ScreenFeedbackRootName));
         public Transform CameraRoot => cameraRoot ? cameraRoot : (cameraRoot = EnsureChild(CameraRootName));
+        public RectTransform UiVfxRoot
+        {
+            get
+            {
+                if (uiVfxRoot) return uiVfxRoot;
+                var existing = IconFlyRoot.Find("UiVfxRoot");
+                if (existing) return uiVfxRoot = existing as RectTransform;
+                uiVfxRoot = new GameObject("UiVfxRoot", typeof(RectTransform)).GetComponent<RectTransform>();
+                uiVfxRoot.SetParent(IconFlyRoot, false);
+                uiVfxRoot.anchorMin = Vector2.zero;
+                uiVfxRoot.anchorMax = Vector2.one;
+                uiVfxRoot.offsetMin = uiVfxRoot.offsetMax = Vector2.zero;
+                return uiVfxRoot;
+            }
+        }
 
         private void Reset()
         {

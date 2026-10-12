@@ -2,7 +2,7 @@
 
 Authoring bằng SO: mỗi loại effect có asset riêng; Definition chọn Sequence/Parallel/Staggered và chứa list asset.
 SO không có inheritance hoặc override; dữ liệu runtime truyền qua code/component. Sample giữ 4 icon hiện có và
-chỉ thêm 7 SO dùng chung. Xem [hướng dẫn effect assets](Documentation~/effect-assets.md).
+có preset VFX 2D cho Canvas. Xem [hướng dẫn effect assets](Documentation~/effect-assets.md).
 
 Feedback cho Unity: VFX, haptic, floating text, icon bay về HUD, UI punch, camera shake và screen flash. Một `FeedbackDefinition` có thể ghép các effect bằng Sequence, Parallel và Delay. Package chỉ trình bày kết quả; việc cộng tiền, năng lượng hoặc phần thưởng thuộc gameplay.
 
@@ -66,7 +66,22 @@ Primitive playback cần được caller giữ handle và Stop khi đóng UI. Re
 
 Duplicate definition để chỉnh thời gian, Count, Size, Spread, Stagger, ArcHeight, Spin và Ease. `Amount` là giá trị reward thật; `Count` là số icon dùng để minh họa, giới hạn 64 mỗi lượt. `.WithIcon()` chỉ thay sprite của lượt phát, không sửa shared definition.
 
-Nếu dùng floating text hoặc camera shake, gán camera game vào Host trước khi chạy. Từ bootstrap có thể gọi `host.Initialize(gameCamera)`; thay camera sẽ dừng playback hiện tại và khởi tạo lại service. Với camera follow, gán Camera Root của FeedbackRoot vào transform offset nằm dưới follow rig và phía trên camera.
+Nếu dùng floating text hoặc camera shake, gán camera game vào Host trước khi chạy. Host mặc định tìm `Camera.main` lúc khởi tạo nếu World Camera trống; có thể tắt `Use Main Camera` để chỉ dùng camera được gán rõ ràng. Từ bootstrap có thể gọi `host.Initialize(gameCamera)`; thay camera sẽ dừng playback hiện tại và khởi tạo lại service. Camera xuất hiện sau khi Host đã khởi tạo cần được bind lại bằng overload này; nếu service được đăng ký ở composition root, đăng ký lại các instance sau khi bind. Với camera follow, gán Camera Root của FeedbackRoot vào transform offset nằm dưới follow rig và phía trên camera. Camera shake chỉ tác động nội dung được camera render; UI **Screen Space Overlay** không rung theo camera.
+
+## VFX 2D trên UI
+
+VFX asset có `Space = UI` chạy dưới `FeedbackRoot.UiVfxRoot` trong Canvas, không cần camera. `Space = World` giữ hành vi particle/world hiện có. Nếu dùng rig tự tạo, gán Ui Vfx Root vào một RectTransform nằm dưới Canvas; root mặc định được tạo dưới IconFlyRoot của rig sample.
+
+Sample có sẵn `Generated/UI VFX/UiRewardBurst.asset` (burst vàng) và `UiStarBurst.asset` (sparkle hình sao), cùng prefab tương ứng. Chọn **Tools → Dreamy → Feedback → Create UI VFX Starter** để tạo thêm một bộ `UiRewardBurst` trong thư mục mới. Prefab dùng `UiBurstVfxInstance`: chỉnh Sprite, Color, Count, Radius, Size và Spin để tạo sparkle/confetti. Không cần shader particle hoặc thư viện ngoài. Images không nhận raycast; số mảnh giới hạn 64 mỗi instance và dùng lại khi trả về pool.
+
+Gán asset này vào `FeedbackPlayer` trên button/UI anchor và gán Host; `Play()` dùng vị trí của anchor. Có thể ghép cùng UI punch/icon fly trong Definition. Từ code:
+
+```csharp
+var burst = host.Feedback.Play(FeedbackRequestBuilder.For(uiBurstAsset)
+    .From(this).At(button.transform.position).Build());
+```
+
+Vị trí UI là `Transform.position` của anchor trên cùng Canvas hoặc Canvas có cùng cách bố trí, không phải pixel screen hay vị trí world cần chiếu bằng camera. Để dùng một Canvas khác, gọi primitive với `VfxPlayOptions.Parent` là RectTransform dưới Canvas đó, `Position` là anchor.position. `UseLocalPosition` cho phép truyền tọa độ local của parent. Caller primitive giữ handle và Stop khi đóng UI. Burst và thời gian despawn cùng dùng lựa chọn unscaled của request, nên effect vẫn chạy khi game pause; `.UseUnscaledTime(false)` chọn scaled time cho effect đơn.
 
 IconSource/Target trong preset reward là **UI anchors**. World position không tự chuyển thành vị trí icon HUD. [Hướng dẫn sample](Samples~/BasicFeedbackSample/README.md) có setup HUD, đổi asset và các lỗi thường gặp.
 

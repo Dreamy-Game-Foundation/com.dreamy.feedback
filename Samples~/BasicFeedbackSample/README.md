@@ -46,8 +46,16 @@ The IconFly call requires assigning an IconFlyDatabase containing RewardIcons. A
 
 ## Demo and limits
 
+### Canvas VFX 2D
+
+`Generated/UI VFX/UiRewardBurst.asset` emits twelve golden pieces; `UiStarBurst.asset` emits eight star sparkles. Assign either to a FeedbackPlayer on a UI anchor, bind the Host, and connect `Play()` to a button. The effect uses the anchor's `transform.position` and the rig's Canvas UI VFX root, runs while paused, and does not block clicks. Customize Sprite/Color/Count/Radius/Size/Spin on the prefab. The menu **Tools > Dreamy > Feedback > Create UI VFX Starter** creates a new burst preset without replacing existing assets.
+
+Camera shake needs a game camera assigned to the Host or an active MainCamera at initialization. If the camera loads in a later scene, call `host.Initialize(camera)` and refresh any registered service instances. Camera movement does not shake Screen Space Overlay UI.
+
 Open `Generated/Scenes/FeedbackDemo.unity`. Four rewards and fourteen channel buttons are already wired. The controls report terminal/unavailable states; Play All may replace effects sharing a target/channel. Stop/Complete controls belong to this dedicated preview host.
+
+Click **UI VFX + Text** to preview both effects at the reward icon. Code can use `FeedbackRequestBuilder.For(effect).AtUi(rectTransform).Build()` for Canvas VFX or floating text; the UI anchor is resolved when the effect starts.
 
 Desktop/Editor haptics report unsupported. Generic mobile vibration has one intensity fallback; native device patterns and performance need device testing. Input needs an EventSystem configured for the project (sample uses StandaloneInputModule). TMP Essential Resources are required; portable font is Liberation Sans with its included OFL license. Sandbox custom fonts/confetti remain project-owned.
 
-Legacy definitions are readable but authored through the migration window. Legacy template factory lives under Dreamy > Feedback > Legacy Templates; new authoring uses SO + mode/list. New sample imports do not require running the authoring tool.
+Legacy definitions remain readable and can be migrated through the migration window. New authoring uses SO + mode/list; imported samples are ready to use without generation tools.

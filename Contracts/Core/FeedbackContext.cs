@@ -5,14 +5,16 @@ namespace Dreamy.Feedback
     {
         public FeedbackContext(Vector3 worldPosition, Object source = null, Transform target = null,
             long amount = 0, float intensity = 1, Transform parent = null, Transform followTarget = null,
-            Transform iconSource = null, Sprite icon = null, int? iconCount = null, string text = null)
+            Transform iconSource = null, Sprite icon = null, int? iconCount = null, string text = null,
+            RectTransform uiAnchor = null)
         {
             IconCount = iconCount; Text = text; WorldPosition = worldPosition; Source = source; Target = target; Amount = amount;
             Intensity = Mathf.Clamp(float.IsNaN(intensity) || float.IsInfinity(intensity) ? 1 : intensity, 0, 4);
-            Parent = parent; FollowTarget = followTarget; IconSource = iconSource; Icon = icon;
+            Parent = parent; FollowTarget = followTarget; IconSource = iconSource; Icon = icon; UiAnchor = uiAnchor;
         }
         public int? IconCount { get; }
         public string Text { get; }
+        public RectTransform UiAnchor { get; }
         public Vector3 WorldPosition { get; }
         public Object Source { get; }
         public Transform Target { get; }

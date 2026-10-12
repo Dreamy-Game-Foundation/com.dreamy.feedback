@@ -40,6 +40,7 @@ namespace Dreamy.Feedback
         private Object source;
         private Sprite icon;
         private Transform target, iconSource;
+        private RectTransform uiAnchor;
         private long amount;
         private float intensity = 1;
         private CancellationToken cancellation;
@@ -51,6 +52,7 @@ namespace Dreamy.Feedback
         public FeedbackRequestBuilder To(Transform value) { target = value; return this; }
         public FeedbackRequestBuilder IconsFrom(Transform value) { iconSource = value; return this; }
         public FeedbackRequestBuilder At(Vector3 value) { position = value; return this; }
+        public FeedbackRequestBuilder AtUi(RectTransform anchor) { uiAnchor = anchor; return this; }
         public FeedbackRequestBuilder WithIcon(Sprite value) { icon = value; return this; }
         public FeedbackRequestBuilder WithIconCount(int value) { iconCount = value; return this; }
         public FeedbackRequestBuilder WithText(string value) { text = value; return this; }
@@ -62,7 +64,7 @@ namespace Dreamy.Feedback
         public FeedbackRequestBuilder UseUnscaledTime(bool value) { unscaledTime = value; return this; }
         public FeedbackRequest Build()
         {
-            var context = new FeedbackContext(position, source, target, amount, intensity, iconSource: iconSource, icon: icon, iconCount: iconCount, text: text);
+            var context = new FeedbackContext(position, source, target, amount, intensity, iconSource: iconSource, icon: icon, iconCount: iconCount, text: text, uiAnchor: uiAnchor);
             return effect ? new FeedbackRequest(effect, context, cancellation, overrides, unscaledTime, bindings)
                 : new FeedbackRequest(definition, context, cancellation, overrides, bindings);
         }

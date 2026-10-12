@@ -10,6 +10,7 @@ namespace Dreamy.Feedback
         public Quaternion Rotation;
         public Transform Parent;
         public Transform FollowTarget;
+        public RectTransform UiAnchor;
         public bool UseLocalPosition;
 
         public static VfxPlayOptions At(Vector3 position)

@@ -110,6 +110,39 @@ namespace Dreamy.Feedback.Tests
             var handle = service.Shake(CameraShakeOptions.Small); yield return null; handle.Stop();
             Assert.That(camera.transform.localPosition, Is.EqualTo(moved)); service.Dispose();
         }
+        [UnityTest] public IEnumerator HostResolvesMainCameraAndExplicitBindingWins()
+        {
+            // Other suites may leave a loaded demo scene with a MainCamera.
+            var priorCameras = new List<Camera>();
+            foreach (var camera in Object.FindObjectsByType<Camera>(FindObjectsSortMode.None))
+                if (camera.enabled) { priorCameras.Add(camera); camera.enabled = false; }
+            try
+            {
+                var main = Track(new GameObject("Main", typeof(Camera))).GetComponent<Camera>();
+                main.tag = "MainCamera";
+                var rig = Track(new GameObject("Rig")); rig.SetActive(false);
+                var root = rig.AddComponent<FeedbackRoot>();
+                var host = rig.AddComponent<FeedbackHost>(); Set(host, "root", root);
+                host.Initialize();
+                Assert.That(host.WorldCamera, Is.SameAs(main));
+                Assert.That(host.CameraShake, Is.Not.Null);
+                var basis = main.transform.localPosition;
+                var old = host.CameraShake.Shake(CameraShakeOptions.Small);
+                yield return null;
+                Assert.That(main.transform.localPosition, Is.Not.EqualTo(basis));
+                var explicitCamera = Track(new GameObject("Explicit", typeof(Camera))).GetComponent<Camera>();
+                host.Initialize(explicitCamera);
+                Assert.That(old.Status, Is.EqualTo(FeedbackStatus.Stopped));
+                Assert.That(main.transform.localPosition, Is.EqualTo(basis));
+                Assert.That(host.WorldCamera, Is.SameAs(explicitCamera));
+                host.Shutdown();
+            }
+            finally
+            {
+                foreach (var camera in priorCameras) if (camera) camera.enabled = true;
+            }
+        }
+
         private sealed class FakeHaptic : IHapticService
         {
             public bool Enabled { get; set; } = true;

@@ -45,6 +45,12 @@ namespace Dreamy.Feedback
         }
 
         public FeedbackHandle Play(string text, Vector3 worldPosition, FloatingTextOptions options)
+            => PlayText(text, worldPosition, options, null);
+
+        public FeedbackHandle PlayAtUi(string text, RectTransform anchor, FloatingTextOptions options)
+            => PlayText(text, default, options, anchor);
+
+        private FeedbackHandle PlayText(string text, Vector3 worldPosition, FloatingTextOptions options, RectTransform anchor)
         {
             if (active.Count >= MaximumActiveTexts) return default;
             if (!database)
@@ -58,7 +64,7 @@ namespace Dreamy.Feedback
             {
                 var direct = preset.Settings; direct.Color = options.Color ?? direct.Color; direct.Duration = options.Duration ?? direct.Duration;
                 direct.MoveOffset = options.MoveOffset ?? direct.MoveOffset; direct.StartScale = options.StartScale ?? direct.StartScale; direct.EndScale = options.EndScale ?? direct.EndScale;
-                return Play(direct, text, worldPosition, options.UnscaledTime);
+                return anchor ? PlayAtUi(direct, text, anchor, options.UnscaledTime) : Play(direct, text, worldPosition, options.UnscaledTime);
             }
             if (!database.TryGet(styleId, out var entry) || entry == null)
             {
@@ -75,10 +81,19 @@ namespace Dreamy.Feedback
             var settings = new FloatingTextFeedbackSettings { Prefab = entry.Prefab.gameObject, Color = options.Color ?? entry.Color,
                 Duration = options.Duration ?? entry.Duration, MoveOffset = options.MoveOffset ?? entry.MoveOffset,
                 StartScale = options.StartScale ?? entry.StartScale, EndScale = options.EndScale ?? entry.EndScale };
-            return Play(settings, text, worldPosition, options.UnscaledTime);
+            return anchor ? PlayAtUi(settings, text, anchor, options.UnscaledTime) : Play(settings, text, worldPosition, options.UnscaledTime);
         }
 
         public FeedbackHandle Play(FloatingTextFeedbackSettings settings, string text, Vector3 worldPosition, bool unscaledTime)
+            => PlayText(settings, text, worldPosition, unscaledTime, false);
+
+        public FeedbackHandle PlayAtUi(FloatingTextFeedbackSettings settings, string text, RectTransform anchor, bool unscaledTime)
+        {
+            if (!FeedbackUtility.TryUiPosition(anchor, root, out var position)) return default;
+            return PlayText(settings, text, position, unscaledTime, true);
+        }
+
+        private FeedbackHandle PlayText(FloatingTextFeedbackSettings settings, string text, Vector3 worldPosition, bool unscaledTime, bool uiPosition)
         {
             if (!root || active.Count >= MaximumActiveTexts || !settings.Prefab || !Finite(settings.Duration) || settings.Duration < 0 ||
                 !Finite(settings.StartScale) || !Finite(settings.EndScale)) return default;
@@ -88,7 +103,7 @@ namespace Dreamy.Feedback
             var instance = Get(prefab);
             long lease = ++generation; active[instance] = lease;
 
-            if (worldCamera) worldPosition = FeedbackUtility.WorldToUIPosition(worldPosition, worldCamera, root);
+            if (!uiPosition && worldCamera) worldPosition = FeedbackUtility.WorldToUIPosition(worldPosition, worldCamera, root);
             var state = new FeedbackPlayback(); playback[instance] = state;
             var animation = instance.Play(text, worldPosition, settings.Color, settings.Duration, settings.MoveOffset, settings.StartScale, settings.EndScale, unscaledTime, backend);
             state.Bind(() => { animation.Stop(); Release(instance); }, () => { animation.Complete(); Release(instance); });

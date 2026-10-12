@@ -186,7 +186,8 @@ namespace Dreamy.Feedback
                     case FeedbackNodeType.Delay: return backend.Animate(node.Duration, request.UnscaledTime, FeedbackEase.Linear, _ => { });
                     case FeedbackNodeType.Vfx:
                         if(c.Intensity <= 0) return FeedbackHandle.Completed;
-                        var vfxOptions = new VfxPlayOptions { Position = c.WorldPosition, Parent = c.Parent, FollowTarget = c.FollowTarget, Scale = c.Intensity, UnscaledTime = request.UnscaledTime };
+                        var vfxOptions = new VfxPlayOptions { Position = c.WorldPosition, Parent = c.Parent, FollowTarget = c.FollowTarget, Scale = c.Intensity, UnscaledTime = request.UnscaledTime,
+                            UiAnchor = c.UiAnchor };
                         var vfx = node.DirectAsset
                             ? (services.Vfx as IVfxPresetService)?.Play(node.VfxSettings, vfxOptions) ?? default
                             : services.Vfx?.Play(node.Id, vfxOptions) ?? default;
@@ -198,12 +199,17 @@ namespace Dreamy.Feedback
                         return FeedbackHandle.Completed;
                     case FeedbackNodeType.FloatingText:
                         var text = (node.Text ?? "").Replace("{amount}", c.Amount.ToString(CultureInfo.InvariantCulture));
+                        var textOptions = new FloatingTextOptions
+                        { StyleId = node.Id, UnscaledTime = request.UnscaledTime,
+                            Color = (node.Overrides.Fields & FeedbackOverrideFields.Color) != 0 ? node.TextSettings.Color : (Color?)null,
+                            Duration = (node.Overrides.Fields & FeedbackOverrideFields.Duration) != 0 ? node.TextSettings.Duration : (float?)null };
+                        if (c.UiAnchor)
+                            return node.DirectAsset
+                                ? (services.FloatingText as FloatingTextService)?.PlayAtUi(node.TextSettings, text, c.UiAnchor, request.UnscaledTime) ?? default
+                                : (services.FloatingText as FloatingTextService)?.PlayAtUi(text, c.UiAnchor, textOptions) ?? default;
                         return node.DirectAsset
                             ? (services.FloatingText as IFloatingTextPresetService)?.Play(node.TextSettings, text, c.WorldPosition, request.UnscaledTime) ?? default
-                            : services.FloatingText?.Play(text, c.WorldPosition, new FloatingTextOptions
-                            { StyleId = node.Id, UnscaledTime = request.UnscaledTime,
-                                Color = (node.Overrides.Fields & FeedbackOverrideFields.Color) != 0 ? node.TextSettings.Color : (Color?)null,
-                                Duration = (node.Overrides.Fields & FeedbackOverrideFields.Duration) != 0 ? node.TextSettings.Duration : (float?)null }) ?? default;
+                            : services.FloatingText?.Play(text, c.WorldPosition, textOptions) ?? default;
                     case FeedbackNodeType.IconFly:
                         if (node.IconFly.Count == 0) return FeedbackHandle.Completed;
                         if (!c.Target || !c.IconSource || services.IconFly == null) return default;

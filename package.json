@@ -1,6 +1,6 @@
 {
   "name": "com.dreamy.feedback",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "displayName": "Dreamy Feedback",
   "description": "Reusable feedback framework for mobile and casual Unity games: VFX, haptics, floating text, icon fly, screen feedback, camera shake, and optional sequences.",
   "unity": "6000.0",

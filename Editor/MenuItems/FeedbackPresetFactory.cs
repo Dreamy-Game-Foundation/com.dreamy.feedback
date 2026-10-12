@@ -1,4 +1,3 @@
-using UnityEditor;
 using UnityEngine;
 
 namespace Dreamy.Feedback.Editor
@@ -69,24 +68,5 @@ namespace Dreamy.Feedback.Editor
             return definition;
         }
 
-        [MenuItem("Dreamy/Feedback/Legacy Templates/Button Confirm")]
-        private static void Confirm() => Save(FeedbackPreset.ButtonConfirm);
-        [MenuItem("Dreamy/Feedback/Legacy Templates/Button Reject")]
-        private static void Reject() => Save(FeedbackPreset.ButtonReject);
-        [MenuItem("Dreamy/Feedback/Legacy Templates/Reward Pop")]
-        private static void Reward() => Save(FeedbackPreset.RewardPop);
-        [MenuItem("Dreamy/Feedback/Legacy Templates/Combo Popup")]
-        private static void Combo() => Save(FeedbackPreset.ComboPopup);
-        [MenuItem("Dreamy/Feedback/Legacy Templates/Level Complete")]
-        private static void Win() => Save(FeedbackPreset.LevelComplete);
-        [MenuItem("Dreamy/Feedback/Legacy Templates/Soft Shake")]
-        private static void Shake() => Save(FeedbackPreset.SoftShake);
-        [MenuItem("Dreamy/Feedback/Legacy Templates/Success Flash")]
-        private static void Flash() => Save(FeedbackPreset.SuccessFlash);
-
-        private static void Save(FeedbackPreset preset)
-        {
-            ProjectWindowUtil.CreateAsset(Create(preset), preset + ".asset");
-        }
     }
 }

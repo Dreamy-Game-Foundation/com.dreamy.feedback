@@ -22,6 +22,8 @@ namespace Dreamy.Feedback
             gameObject.SetActive(true);
         }
 
+        public virtual void ConfigurePlayback(VfxPlayOptions options, float duration) { }
+
         public virtual void Stop()
         {
             releaseAction?.Invoke(this);
