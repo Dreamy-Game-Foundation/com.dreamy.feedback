@@ -7,7 +7,7 @@
 - MCP PlayMode initialization timed out; PlayMode counts are from isolated batchmode XML. MCP EditMode completed successfully.
 - Release version 0.4.0 replaces the historical Unreleased state described below. Mobile device and player builds were not rerun for this release.
 
-Evidence: sandbox `.omo/evidence/samples-release/`.
+Evidence: sandbox `docs/evidence/samples-release/`.
 
 # UI VFX and camera binding verification — 2026-10-12
 
@@ -19,7 +19,7 @@ Unity 6000.4.12f1 Linux, working tree; no release tag.
 - Both imported UI presets resolved successfully in Unity with Canvas routing and valid prefab/component references. Assets and meta GUIDs are mirrored in the portable sample.
 - MCP Test Runner failed to initialize twice; successful test counts above come from Unity batchmode XML, not those MCP jobs. No mobile device or player build validation was performed for this change.
 
-Evidence: sandbox `.omo/evidence/feedback-ui-camera/`.
+Evidence: sandbox `docs/evidence/feedback-ui-camera/`.
 
 # Effect SO completion — 2026-10-10
 
@@ -32,7 +32,7 @@ Evidence: sandbox `.omo/evidence/feedback-ui-camera/`.
 - Windows development build and graphical batchmode player smoke pass, **exit 0**. Runtime/Contracts boundary, asmdef/package-check, source diff check and package GUID uniqueness pass. No serialized override/base-preset fields remain in portable SO files. Sandbox compilation has no C# errors; the existing FloatingTextInstance CS0108 warning remains.
 - Active sandbox user edits are preserved in dirty `Assets/FeedbackWorkingCopies/FeedbackDemo Authoring Working Copy.unity` with initial/final snapshots. The clean demo fixture was updated separately. The sandbox's custom text/VFX assets are retained.
 
-Evidence: `.omo/evidence/feedback-simplification/summary.json`, `editmode-final.xml`, `base-release-playmode.xml`, `dotween-release-playmode.xml`, `build.log`, `player-smoke.log`, `player-exit.json`, `static-checks.json`, and scene snapshots. Failed initial fixture runs are retained but excluded from passing counts.
+Evidence: `docs/evidence/feedback-simplification/summary.json`, `editmode-final.xml`, `base-release-playmode.xml`, `dotween-release-playmode.xml`, `build.log`, `player-smoke.log`, `player-exit.json`, `static-checks.json`, and scene snapshots. Failed initial fixture runs are retained but excluded from passing counts.
 
 The first sandbox migration produced an empty ComboPopup list. Its original tracked data was restored, conversion rerun, and migration now detaches the converted step list and rejects empty output before saving. Both preview and migration regression tests pass. Legacy layouts with standalone/parallel/trailing Delay require an explicit redesign and are reported; unsupported assets are not silently flattened.
 
@@ -49,7 +49,7 @@ This section supersedes the historical counts below. Validated local working tre
 - Harness asmdef and package-check pass. Runtime/Contracts contain no UnityEditor references or Task.Run. Editor compilation has no C# errors; an existing CS0108 warning in FloatingTextInstance remains.
 - Prior unsaved sandbox edits are preserved in the active, dirty `Assets/FeedbackWorkingCopies/FeedbackDemo Working Copy.unity`; the original demo fixture receives only the serialized entry update. User fonts/art remain in the sandbox.
 
-Evidence: sandbox `.omo/evidence/feedback-completion/`, notably `base-editmode-final.xml`, `base-playmode-complete.xml`, `dotween-playmode-complete.xml`, `base-build-complete.log`, `player-smoke-batch-complete.log`, `player-exit-batch-complete.json`, `sandbox-runtime-final.json`, `editor-restoration.json`, `portrait.png`, `landscape.png` and `summary.json`.
+Evidence: sandbox `docs/evidence/feedback-completion/`, notably `base-editmode-final.xml`, `base-playmode-complete.xml`, `dotween-playmode-complete.xml`, `base-build-complete.log`, `player-smoke-batch-complete.log`, `player-exit-batch-complete.json`, `sandbox-runtime-final.json`, `editor-restoration.json`, `portrait.png`, `landscape.png` and `summary.json`.
 
 Physical Android/iOS vibration, mobile builds and device performance/thermal budgets are untested. Editor/desktop haptics report unsupported; generic mobile vibration cannot distinguish native intensity patterns. Foundation integration was not changed or rerun in this completion pass. Minimum Unity 6000.0 is not validated by the observed 6000.4.12f1 run.
 
@@ -63,7 +63,7 @@ Physical Android/iOS vibration, mobile builds and device performance/thermal bud
 - Isolated base consumer without Core/DOTween: **11/11 EditMode passed**, including all template serialization round-trips; **25/25 PlayMode passed**, including normal completion, Stop and Complete of all seven saved presets on GameFeedbackRig.
 - Unity recompilation completed with no C# errors. Inspector interaction/visual layout was not manually reviewed; no player build was repeated for these Editor/data changes.
 
-Evidence: sandbox `.omo/evidence/feedback-authoring/` (`editmode.xml`, `playmode.xml`, `summary.json`).
+Evidence: sandbox `docs/evidence/feedback-authoring/` (`editmode.xml`, `playmode.xml`, `summary.json`).
 
 # DOTween sample packaging verification — 2026-10-10
 
@@ -74,7 +74,7 @@ DOTween adapter now ships as **DOTween Feedback**, at `Samples~/DOTweenFeedbackS
 - Runtime/test code, script GUIDs and assembly names are unchanged from the previous adapter. Unity resolves DotweenFeedbackProvider to the imported sample path; compilation is complete.
 - Package Manager exposes Basic Feedback and DOTween Feedback independently. Install DOTween before importing its adapter sample; do not keep the old adapter package installed alongside the sample.
 
-Evidence: sandbox `.omo/evidence/feedback-dotween-sample/` (`dotween-sample-playmode.xml`, `base-playmode.xml`, `summary.json`). Existing Console entries about DOTweenSettings creation inside Library/PackageCache are separate distribution setup errors; these consumer test runs pass. No player build was repeated for this packaging-only change.
+Evidence: sandbox `docs/evidence/feedback-dotween-sample/` (`dotween-sample-playmode.xml`, `base-playmode.xml`, `summary.json`). Existing Console entries about DOTweenSettings creation inside Library/PackageCache are separate distribution setup errors; these consumer test runs pass. No player build was repeated for this packaging-only change.
 
 # Current starter sample verification — 2026-10-09
 
@@ -85,7 +85,7 @@ This section supersedes the earlier sample design and counts below. Local workin
 - Preserved the user's Magic font and Hyper Casual confetti in the sandbox preview. Portable sample uses OFL Liberation Sans, original sample VFX and original resource icons; third-party asset dependencies are excluded and verified in a consumer without those assets.
 - README now covers importing the rig, existing HUD anchors, Inspector events, primitive/facade calls, camera setup, asset replacement, lifetime and extension boundaries. Built-in graph node types still require executor/editor changes to extend; only services/backends/animators are directly replaceable externally.
 
-Evidence: sandbox `.omo/evidence/feedback-starter/`.
+Evidence: sandbox `docs/evidence/feedback-starter/`.
 
 | Gate | Result |
 | --- | --- |
@@ -117,7 +117,7 @@ Validation date: 2026-10-09. Unity 6000.4.12f1, Linux Editor/player. This valida
 
 ## Current evidence
 
-Evidence is in sandbox `.omo/evidence/feedback-modular/`.
+Evidence is in sandbox `docs/evidence/feedback-modular/`.
 
 | Gate | Result | Evidence |
 | --- | --- | --- |
@@ -167,7 +167,7 @@ Validation date: 2026-10-07. Unity 6000.4.12f1, Windows Editor/player, sandbox U
 
 ## Evidence
 
-Evidence is stored in the sandbox `.omo/evidence/feedback/`; larger original logs are in `Logs/`.
+Evidence is stored in the sandbox `docs/evidence/feedback/`; larger original logs are in `Logs/`.
 
 | Gate | Result | Evidence |
 | --- | --- | --- |
