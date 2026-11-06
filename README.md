@@ -1,5 +1,11 @@
 # Dreamy Feedback
 
+## Phiên bản 0.4.1
+
+Refresh sample regression assertions and validation/screenshot evidence paths. No runtime effect, preset or serialized-asset contract changes.
+
+Bản chuẩn bị phát hành nội bộ ngày 2026-11-06; chưa tạo/push tag. Giữ nguyên các sample đã import và meta GUID; import mới dùng version 0.4.1. Xem [CHANGELOG](CHANGELOG.md).
+
 Authoring bằng SO: mỗi loại effect có asset riêng; Definition chọn Sequence/Parallel/Staggered và chứa list asset.
 SO không có inheritance hoặc override; dữ liệu runtime truyền qua code/component. Sample giữ 4 icon hiện có và
 có preset VFX 2D cho Canvas. Xem [hướng dẫn effect assets](Documentation~/effect-assets.md).

@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-06
+
+- Refresh sample regression assertions and validation/screenshot evidence paths. No runtime effect, preset or serialized-asset contract changes.
+- Synchronize package metadata and README; no asset GUID or game-save migration. Prepared locally; no release tag or publication is implied.
+
 ## [0.4.0] - 2026-10-12
 
 - Update sample regressions to distinguish icon instances from the persistent UI VFX container; isolate fallback camera fixtures from other loaded scenes.
